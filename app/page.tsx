@@ -1,27 +1,62 @@
 "use client";
 
-import { useState } from "react";
-import { Calendar, Clock, Star } from "lucide-react";
-import { useRoundRealtime } from "@/hooks/useRoundRealtime";
+import Link from "next/link";
+import { BarChart3, Clapperboard, LibraryBig, type LucideIcon } from "lucide-react";
 import { useParticipants } from "@/hooks/useParticipants";
 import { useCurrentParticipant } from "@/hooks/useCurrentParticipant";
+import { useMovieAverages } from "@/hooks/useMovieAverages";
 import { storeParticipant } from "@/lib/participant";
-import { supabase } from "@/lib/supabaseClient";
 import { NamePicker } from "@/components/NamePicker";
-import { MovieSearch } from "@/components/MovieSearch";
-import { RatingInput } from "@/components/RatingInput";
-import { RoundStatusBanner } from "@/components/RoundStatusBanner";
-import { RevealResults } from "@/components/RevealResults";
-import { GlassButton } from "@/components/GlassButton";
-import type { Movie, Participant, Rating, Round, TmdbMovieDetails } from "@/lib/types";
+import type { MovieAverage } from "@/lib/types";
+
+const SECTIONS: {
+  href: string;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+}[] = [
+  {
+    href: "/rating",
+    label: "فقرة التقييم",
+    description: "اختر الفلم وابدأ التقييم",
+    icon: Clapperboard,
+  },
+  {
+    href: "/stats",
+    label: "الإحصائيات",
+    description: "معدلاتكم وأرقامكم",
+    icon: BarChart3,
+  },
+  {
+    href: "/archive",
+    label: "الأرشيف",
+    description: "كل الأفلام اللي شفتوها",
+    icon: LibraryBig,
+  },
+];
+
+function extremum(
+  movies: MovieAverage[],
+  key: "average_score" | "runtime_minutes",
+  direction: "max" | "min",
+): MovieAverage | null {
+  const candidates = movies.filter((m) => m[key] != null);
+  if (candidates.length === 0) return null;
+  return candidates.reduce((best, m) => {
+    const better =
+      direction === "max"
+        ? Number(m[key]) > Number(best[key])
+        : Number(m[key]) < Number(best[key]);
+    return better ? m : best;
+  });
+}
 
 export default function Home() {
-  const { round, submittedIds, ratings, loading, refresh } = useRoundRealtime();
   const { participants } = useParticipants();
-  const { participant, ready, refresh: refreshParticipant } =
-    useCurrentParticipant();
+  const { participant, ready, refresh } = useCurrentParticipant();
+  const { movies, loading: moviesLoading } = useMovieAverages();
 
-  if (!ready || loading) {
+  if (!ready) {
     return <main className="flex flex-1 items-center justify-center" />;
   }
 
@@ -33,197 +68,79 @@ export default function Home() {
           participants={participants}
           onSelect={(p) => {
             storeParticipant(p.id, p.name);
-            refreshParticipant();
+            refresh();
           }}
         />
       </main>
     );
   }
 
-  return (
-    <RoundView
-      key={round?.id ?? "idle"}
-      round={round}
-      submittedIds={submittedIds}
-      ratings={ratings}
-      participants={participants}
-      participant={participant}
-      refresh={refresh}
-    />
-  );
-}
+  const highest = extremum(movies, "average_score", "max");
+  const lowest = extremum(movies, "average_score", "min");
+  const longest = extremum(movies, "runtime_minutes", "max");
+  const shortest = extremum(movies, "runtime_minutes", "min");
 
-function RoundView({
-  round,
-  submittedIds,
-  ratings,
-  participants,
-  participant,
-  refresh,
-}: {
-  round: Round | null;
-  submittedIds: string[];
-  ratings: Rating[];
-  participants: Participant[];
-  participant: { id: string; name: string };
-  refresh: () => void;
-}) {
-  const [startingNew, setStartingNew] = useState(false);
-  const [startError, setStartError] = useState<string | null>(null);
-  const [starting, setStarting] = useState(false);
-  const [ratingValue, setRatingValue] = useState(7);
-  const [submitting, setSubmitting] = useState(false);
-
-  const hasSubmitted = submittedIds.includes(participant.id);
-
-  async function startRound(movie: TmdbMovieDetails) {
-    setStarting(true);
-    setStartError(null);
-    const { error } = await supabase.rpc("start_round", {
-      p_tmdb_id: movie.tmdb_id,
-      p_title: movie.title,
-      p_poster_path: movie.poster_path,
-      p_backdrop_path: movie.backdrop_path,
-      p_release_year: movie.release_year,
-      p_overview: movie.overview,
-      p_vote_average: movie.vote_average,
-      p_runtime_minutes: movie.runtime_minutes,
-      p_started_by: participant.id,
-    });
-    setStarting(false);
-    if (error) {
-      setStartError(
-        error.message.includes("ALREADY_OPEN")
-          ? "في جولة تقييم مفتوحة الحين، حد ثاني بدأها للتو"
-          : "صار خطأ، حاول مرة ثانية",
-      );
-      return;
-    }
-    refresh();
-  }
-
-  async function submitRating() {
-    if (!round) return;
-    setSubmitting(true);
-    await supabase.rpc("submit_rating", {
-      p_round_id: round.id,
-      p_participant_id: participant.id,
-      p_score: ratingValue,
-    });
-    setSubmitting(false);
-    refresh();
-  }
-
-  async function forceReveal() {
-    if (!round) return;
-    await supabase.rpc("force_reveal_round", { p_round_id: round.id });
-    refresh();
-  }
-
-  const showSearch = !round || startingNew;
-
-  if (showSearch) {
-    return (
-      <main className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-16 text-center">
-        <h1 className="animate-blur-fade-up text-3xl font-medium sm:text-5xl">
-          ابدأ فقرة الليلة
-        </h1>
-        <p
-          className="animate-blur-fade-up max-w-md text-gray-400"
-          style={{ animationDelay: "100ms" }}
-        >
-          ابحث عن الفلم اللي بتشوفونه الليلة وابدأ التقييم
-        </p>
-        <div className="animate-blur-fade-up" style={{ animationDelay: "200ms" }}>
-          <MovieSearch onPick={startRound} disabled={starting} />
-        </div>
-        {startError && <p className="text-sm text-red-400">{startError}</p>}
-        {round?.status === "revealed" && (
-          <button
-            onClick={() => setStartingNew(false)}
-            className="text-sm text-gray-400 hover:text-white"
-          >
-            رجوع للنتيجة الأخيرة
-          </button>
-        )}
-      </main>
-    );
-  }
-
-  if (round.status === "revealed") {
-    return (
-      <main className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-16">
-        <MovieHero movie={round.movies} />
-        <RevealResults ratings={ratings} onStartNew={() => setStartingNew(true)} />
-      </main>
-    );
-  }
-
-  if (hasSubmitted) {
-    return (
-      <main className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-16">
-        <MovieHero movie={round.movies} />
-        <RoundStatusBanner
-          participants={participants}
-          submittedIds={submittedIds}
-          requiredCount={round.required_count}
-          onForceReveal={forceReveal}
-        />
-      </main>
-    );
-  }
+  const quickStats = [
+    { label: "عدد الأفلام", value: moviesLoading ? "—" : String(movies.length) },
+    {
+      label: "أعلى تقييم",
+      value: highest ? `${highest.title} · ${Number(highest.average_score).toFixed(1)}` : "—",
+    },
+    {
+      label: "أقل تقييم",
+      value: lowest ? `${lowest.title} · ${Number(lowest.average_score).toFixed(1)}` : "—",
+    },
+    {
+      label: "أطول فلم",
+      value: longest ? `${longest.title} · ${longest.runtime_minutes} د` : "—",
+    },
+    {
+      label: "أقصر فلم",
+      value: shortest ? `${shortest.title} · ${shortest.runtime_minutes} د` : "—",
+    },
+  ];
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-16">
-      <MovieHero movie={round.movies} />
-      <RatingInput value={ratingValue} onChange={setRatingValue} />
-      <GlassButton solid onClick={submitRating} disabled={submitting}>
-        أرسل تقييمك
-      </GlassButton>
-    </main>
-  );
-}
-
-function MovieHero({ movie }: { movie: Movie }) {
-  return (
-    <div className="flex max-w-xl flex-col items-center gap-3 text-center">
-      <div
-        className="animate-blur-fade-up flex flex-wrap items-center justify-center gap-4 text-sm text-gray-300"
-        style={{ animationDelay: "0ms" }}
-      >
-        {movie.vote_average != null && (
-          <span className="flex items-center gap-1.5">
-            <Star size={16} className="fill-white text-white" />
-            {Number(movie.vote_average).toFixed(1)} TMDB
-          </span>
-        )}
-        {movie.runtime_minutes != null && (
-          <span className="flex items-center gap-1.5">
-            <Clock size={16} />
-            {movie.runtime_minutes} دقيقة
-          </span>
-        )}
-        {movie.release_year != null && (
-          <span className="flex items-center gap-1.5">
-            <Calendar size={16} />
-            {movie.release_year}
-          </span>
-        )}
-      </div>
-      <h1
-        className="animate-blur-fade-up text-3xl font-medium sm:text-5xl"
-        style={{ animationDelay: "100ms" }}
-      >
-        {movie.title}
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center gap-8 px-4 pb-16 pt-8 text-center">
+      <h1 className="animate-blur-fade-up text-4xl font-medium sm:text-5xl">
+        فقرة الموفي
       </h1>
-      {movie.overview && (
-        <p
-          className="animate-blur-fade-up max-w-lg text-gray-400"
-          style={{ animationDelay: "200ms" }}
-        >
-          {movie.overview}
-        </p>
-      )}
-    </div>
+
+      <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-5">
+        {quickStats.map((s, i) => (
+          <div
+            key={s.label}
+            className="animate-blur-fade-up liquid-glass min-w-0 rounded-xl px-3 py-3"
+            style={{ animationDelay: `${80 + i * 60}ms` }}
+          >
+            <p className="truncate text-sm font-medium">{s.value}</p>
+            <p className="mt-1 text-xs text-gray-400">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div
+        className="animate-blur-fade-up"
+        style={{ animationDelay: "400ms" }}
+      >
+        <p className="text-gray-400">أهلاً</p>
+        <p className="text-2xl font-medium">{participant.name}</p>
+      </div>
+
+      <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
+        {SECTIONS.map(({ href, label, description, icon: Icon }, i) => (
+          <Link
+            key={href}
+            href={href}
+            className="animate-blur-fade-up liquid-glass flex flex-col items-center gap-3 rounded-2xl px-6 py-8 text-center hover:bg-white/5"
+            style={{ animationDelay: `${460 + i * 80}ms` }}
+          >
+            <Icon size={28} />
+            <span className="text-lg font-medium">{label}</span>
+            <span className="text-sm text-gray-400">{description}</span>
+          </Link>
+        ))}
+      </div>
+    </main>
   );
 }

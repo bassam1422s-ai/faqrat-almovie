@@ -2,30 +2,26 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useMovieAverages } from "@/hooks/useMovieAverages";
 import { StatCard } from "@/components/StatCard";
 import { GlassCard } from "@/components/GlassCard";
-import type { MovieAverage, ParticipantStats } from "@/lib/types";
+import type { ParticipantStats } from "@/lib/types";
 
 export default function StatsPage() {
   const [participantStats, setParticipantStats] = useState<ParticipantStats[]>([]);
-  const [movies, setMovies] = useState<MovieAverage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const { movies, loading: moviesLoading } = useMovieAverages();
 
   useEffect(() => {
     async function load() {
-      const [{ data: stats }, { data: movieAverages }] = await Promise.all([
-        supabase.from("participant_stats").select("*").order("name"),
-        supabase
-          .from("movie_averages")
-          .select("*")
-          .order("revealed_at", { ascending: false }),
-      ]);
-      setParticipantStats((stats as ParticipantStats[]) ?? []);
-      setMovies((movieAverages as MovieAverage[]) ?? []);
-      setLoading(false);
+      const { data } = await supabase.from("participant_stats").select("*").order("name");
+      setParticipantStats((data as ParticipantStats[]) ?? []);
+      setStatsLoading(false);
     }
     load();
   }, []);
+
+  const loading = statsLoading || moviesLoading;
 
   const overallAverage =
     movies.length > 0

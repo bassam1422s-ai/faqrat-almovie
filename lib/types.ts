@@ -63,6 +63,7 @@ export type MovieAverage = {
   revealed_at: string;
   average_score: number;
   rating_count: number;
+  runtime_minutes: number | null;
 };
 
 export type ParticipantStats = {

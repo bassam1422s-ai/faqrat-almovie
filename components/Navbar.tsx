@@ -10,6 +10,7 @@ import { NamePicker } from "./NamePicker";
 
 const LINKS = [
   { href: "/", label: "الرئيسية" },
+  { href: "/rating", label: "فقرة التقييم" },
   { href: "/archive", label: "الأرشيف" },
   { href: "/stats", label: "الإحصائيات" },
 ];

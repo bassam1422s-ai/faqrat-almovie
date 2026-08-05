@@ -169,11 +169,12 @@ select
   r.id as round_id,
   r.revealed_at,
   avg(rt.score) as average_score,
-  count(rt.id) as rating_count
+  count(rt.id) as rating_count,
+  m.runtime_minutes
 from movies m
 join rounds r on r.movie_id = m.id and r.status = 'revealed'
 join ratings rt on rt.round_id = r.id
-group by m.id, m.title, m.poster_path, m.backdrop_path, m.release_year, r.id, r.revealed_at;
+group by m.id, m.title, m.poster_path, m.backdrop_path, m.release_year, r.id, r.revealed_at, m.runtime_minutes;
 
 create view participant_stats as
 select
