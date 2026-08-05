@@ -80,23 +80,30 @@ export default function Home() {
   const longest = extremum(movies, "runtime_minutes", "max");
   const shortest = extremum(movies, "runtime_minutes", "min");
 
-  const quickStats = [
-    { label: "عدد الأفلام", value: moviesLoading ? "—" : String(movies.length) },
+  const quickStats: { label: string; title?: string; value: string }[] = [
+    {
+      label: "عدد الأفلام",
+      value: moviesLoading ? "—" : String(movies.length),
+    },
     {
       label: "أعلى تقييم",
-      value: highest ? `${highest.title} · ${Number(highest.average_score).toFixed(1)}` : "—",
+      title: highest?.title,
+      value: highest ? Number(highest.average_score).toFixed(1) : "—",
     },
     {
       label: "أقل تقييم",
-      value: lowest ? `${lowest.title} · ${Number(lowest.average_score).toFixed(1)}` : "—",
+      title: lowest?.title,
+      value: lowest ? Number(lowest.average_score).toFixed(1) : "—",
     },
     {
       label: "أطول فلم",
-      value: longest ? `${longest.title} · ${longest.runtime_minutes} د` : "—",
+      title: longest?.title,
+      value: longest ? `${longest.runtime_minutes} د` : "—",
     },
     {
       label: "أقصر فلم",
-      value: shortest ? `${shortest.title} · ${shortest.runtime_minutes} د` : "—",
+      title: shortest?.title,
+      value: shortest ? `${shortest.runtime_minutes} د` : "—",
     },
   ];
 
@@ -106,15 +113,20 @@ export default function Home() {
         فقرة الموفي
       </h1>
 
-      <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="grid w-full grid-cols-2 gap-3">
         {quickStats.map((s, i) => (
           <div
             key={s.label}
-            className="animate-blur-fade-up liquid-glass min-w-0 rounded-xl px-3 py-3"
+            className="animate-blur-fade-up liquid-glass flex min-h-[6.5rem] min-w-0 flex-col justify-center gap-1 rounded-xl px-4 py-3"
             style={{ animationDelay: `${80 + i * 60}ms` }}
           >
-            <p className="truncate text-sm font-medium">{s.value}</p>
-            <p className="mt-1 text-xs text-gray-400">{s.label}</p>
+            <p className="text-xs text-gray-400">{s.label}</p>
+            {s.title && (
+              <p className="line-clamp-2 text-sm leading-snug font-medium">
+                {s.title}
+              </p>
+            )}
+            <p className="text-xl font-semibold tabular-nums">{s.value}</p>
           </div>
         ))}
       </div>
