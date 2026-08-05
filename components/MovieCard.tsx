@@ -17,6 +17,7 @@ export function MovieCard({ movie, rank, onDeleted }: Props) {
   const [ratings, setRatings] = useState<Rating[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function toggle() {
     if (!open && ratings === null) {
@@ -41,11 +42,16 @@ export function MovieCard({ movie, rank, onDeleted }: Props) {
       return;
     }
     setDeleting(true);
+    setDeleteError(null);
     const { error } = await supabase.rpc("delete_round", {
       p_round_id: movie.round_id,
     });
     setDeleting(false);
-    if (!error) onDeleted(movie.round_id);
+    if (error) {
+      setDeleteError(error.message);
+      return;
+    }
+    onDeleted(movie.round_id);
   }
 
   const poster = tmdbImageUrl(movie.poster_path, "w500");
@@ -102,6 +108,9 @@ export function MovieCard({ movie, rank, onDeleted }: Props) {
             <Trash2 size={14} />
             {deleting ? "جاري الحذف..." : "حذف الفلم"}
           </button>
+          {deleteError && (
+            <p className="px-2 pb-1 text-xs text-red-400">{deleteError}</p>
+          )}
         </div>
       )}
     </div>
