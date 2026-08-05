@@ -155,6 +155,16 @@ begin
 end;
 $$ language plpgsql security definer;
 
+-- Lets the archive delete a mistakenly-logged movie (e.g. picked the wrong
+-- TMDB result). Only touches revealed rounds so it can't be used to cancel
+-- an in-progress vote.
+create or replace function delete_round(p_round_id uuid) returns void as $$
+begin
+  delete from ratings where round_id = p_round_id;
+  delete from rounds where id = p_round_id and status = 'revealed';
+end;
+$$ language plpgsql security definer;
+
 -- ---------------------------------------------------------------------------
 -- Stats views
 -- ---------------------------------------------------------------------------

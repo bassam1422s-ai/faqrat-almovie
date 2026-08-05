@@ -29,6 +29,10 @@ export default function ArchivePage() {
       ? [...movies].sort((a, b) => b.average_score - a.average_score)
       : movies;
 
+  function handleDeleted(roundId: string) {
+    setMovies((prev) => prev.filter((m) => m.round_id !== roundId));
+  }
+
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 pb-16 pt-4">
       <div className="flex items-center justify-between">
@@ -56,7 +60,12 @@ export default function ArchivePage() {
 
       <div className="flex flex-col gap-3">
         {sorted.map((movie, i) => (
-          <MovieCard key={movie.round_id} movie={movie} rank={i + 1} />
+          <MovieCard
+            key={movie.round_id}
+            movie={movie}
+            rank={i + 1}
+            onDeleted={handleDeleted}
+          />
         ))}
       </div>
     </main>

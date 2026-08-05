@@ -28,12 +28,13 @@ function easeInOutSine(t: number) {
   return -(Math.cos(Math.PI * t) - 1) / 2;
 }
 
+const APPEAR_INTERVAL_MS = 25_000;
+
 function scheduleNext(trigger: () => void) {
-  const delay = 40_000 + Math.random() * 50_000; // 40–90s
   return window.setTimeout(() => {
-    if (Math.random() < 0.3) trigger();
+    trigger();
     scheduleNext(trigger);
-  }, delay);
+  }, APPEAR_INTERVAL_MS);
 }
 
 export function FriendCameo() {
@@ -107,7 +108,7 @@ export function FriendCameo() {
   return (
     <div
       ref={elRef}
-      className="liquid-glass pointer-events-none fixed left-0 top-0 z-40 h-44 w-44 overflow-hidden rounded-3xl opacity-0 sm:h-64 sm:w-64"
+      className="liquid-glass pointer-events-none fixed left-0 top-0 z-40 h-56 w-56 overflow-hidden rounded-3xl opacity-0 sm:h-80 sm:w-80"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={src} alt="" className="h-full w-full object-cover" />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Star } from "lucide-react";
+import { ChevronDown, Star, Trash2 } from "lucide-react";
 import { tmdbImageUrl } from "@/lib/tmdb";
 import type { MovieAverage, Rating } from "@/lib/types";
 import { supabase } from "@/lib/supabaseClient";
@@ -9,12 +9,14 @@ import { supabase } from "@/lib/supabaseClient";
 type Props = {
   movie: MovieAverage;
   rank: number;
+  onDeleted: (roundId: string) => void;
 };
 
-export function MovieCard({ movie, rank }: Props) {
+export function MovieCard({ movie, rank, onDeleted }: Props) {
   const [open, setOpen] = useState(false);
   const [ratings, setRatings] = useState<Rating[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function toggle() {
     if (!open && ratings === null) {
@@ -28,6 +30,22 @@ export function MovieCard({ movie, rank }: Props) {
       setLoading(false);
     }
     setOpen((v) => !v);
+  }
+
+  async function handleDelete() {
+    if (
+      !window.confirm(
+        `متأكد إنك تبي تحذف "${movie.title}" وكل تقييماته؟ ما ينرجع بعد الحذف.`,
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    const { error } = await supabase.rpc("delete_round", {
+      p_round_id: movie.round_id,
+    });
+    setDeleting(false);
+    if (!error) onDeleted(movie.round_id);
   }
 
   const poster = tmdbImageUrl(movie.poster_path, "w500");
@@ -75,6 +93,15 @@ export function MovieCard({ movie, rank }: Props) {
               </span>
             </div>
           ))}
+
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="mt-2 flex items-center gap-1.5 px-2 py-1.5 text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
+          >
+            <Trash2 size={14} />
+            {deleting ? "جاري الحذف..." : "حذف الفلم"}
+          </button>
         </div>
       )}
     </div>
