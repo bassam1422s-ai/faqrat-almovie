@@ -4,6 +4,7 @@ import "./globals.css";
 import { CinematicBackdrop } from "@/components/CinematicBackdrop";
 import { Navbar } from "@/components/Navbar";
 import { FriendCameo } from "@/components/FriendCameo";
+import { JoinRatingBanner } from "@/components/JoinRatingBanner";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Navbar />
           {children}
         </div>
+        <JoinRatingBanner />
       </body>
     </html>
   );

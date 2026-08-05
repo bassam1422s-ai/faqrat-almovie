@@ -1,14 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const CAMEO_COUNT = 21;
-const CORNERS = [
-  "top-20 right-4 sm:right-8",
-  "top-20 left-4 sm:left-8",
-  "bottom-6 right-4 sm:right-8",
-  "bottom-6 left-4 sm:left-8",
-] as const;
+const TRAVEL_MS = 6500;
+
+const CORNER_PAIRS: Array<[[number, number], [number, number]]> = [
+  [
+    [0, 0],
+    [1, 1],
+  ],
+  [
+    [1, 0],
+    [0, 1],
+  ],
+  [
+    [1, 1],
+    [0, 0],
+  ],
+  [
+    [0, 1],
+    [1, 0],
+  ],
+];
+
+function easeInOutSine(t: number) {
+  return -(Math.cos(Math.PI * t) - 1) / 2;
+}
 
 function scheduleNext(trigger: () => void) {
   const delay = 40_000 + Math.random() * 50_000; // 40–90s
@@ -19,31 +37,80 @@ function scheduleNext(trigger: () => void) {
 }
 
 export function FriendCameo() {
-  const [visible, setVisible] = useState<{ src: string; corner: string; key: number } | null>(
-    null,
-  );
+  const [src, setSrc] = useState<string | null>(null);
+  const elRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     const show = () => {
       const n = 1 + Math.floor(Math.random() * CAMEO_COUNT);
-      const corner = CORNERS[Math.floor(Math.random() * CORNERS.length)];
-      setVisible({ src: `/cameos/${n}.jpg`, corner, key: Date.now() });
-      window.setTimeout(() => setVisible(null), 4000);
+      setSrc(`/cameos/${n}.jpg`);
     };
-
     const timerId = scheduleNext(show);
     return () => window.clearTimeout(timerId);
   }, []);
 
-  if (!visible) return null;
+  useEffect(() => {
+    if (!src) return;
+    const el = elRef.current;
+    if (!el) return;
+
+    const { width: elW, height: elH } = el.getBoundingClientRect();
+    const margin = Math.max(elW, elH) * 0.4;
+    const [from, to] = CORNER_PAIRS[Math.floor(Math.random() * CORNER_PAIRS.length)];
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const x1 = margin + from[0] * (w - margin * 2);
+    const y1 = margin + from[1] * (h - margin * 2);
+    const x2 = margin + to[0] * (w - margin * 2);
+    const y2 = margin + to[1] * (h - margin * 2);
+
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const length = Math.hypot(dx, dy) || 1;
+    const perpX = -dy / length;
+    const perpY = dx / length;
+    const amplitude = Math.min(length * 0.14, 140);
+
+    const start = performance.now();
+
+    const frame = (now: number) => {
+      const rawT = Math.min(1, (now - start) / TRAVEL_MS);
+      const t = easeInOutSine(rawT);
+      const wave = Math.sin(rawT * Math.PI * 2) * amplitude;
+
+      const x = x1 + dx * t + perpX * wave;
+      const y = y1 + dy * t + perpY * wave;
+      const opacity = rawT < 0.1 ? rawT / 0.1 : rawT > 0.85 ? (1 - rawT) / 0.15 : 1;
+
+      if (elRef.current) {
+        elRef.current.style.transform = `translate3d(${x - elW / 2}px, ${y - elH / 2}px, 0)`;
+        elRef.current.style.opacity = String(Math.max(0, opacity));
+      }
+
+      if (rawT < 1) {
+        rafRef.current = requestAnimationFrame(frame);
+      } else {
+        setSrc(null);
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(frame);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [src]);
+
+  if (!src) return null;
 
   return (
     <div
-      key={visible.key}
-      className={`animate-cameo liquid-glass pointer-events-none fixed z-40 h-24 w-24 overflow-hidden rounded-2xl sm:h-32 sm:w-32 ${visible.corner}`}
+      ref={elRef}
+      className="liquid-glass pointer-events-none fixed left-0 top-0 z-40 h-44 w-44 overflow-hidden rounded-3xl opacity-0 sm:h-64 sm:w-64"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={visible.src} alt="" className="h-full w-full object-cover" />
+      <img src={src} alt="" className="h-full w-full object-cover" />
     </div>
   );
 }
