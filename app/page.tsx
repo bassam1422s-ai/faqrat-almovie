@@ -80,11 +80,7 @@ export default function Home() {
   const longest = extremum(movies, "runtime_minutes", "max");
   const shortest = extremum(movies, "runtime_minutes", "min");
 
-  const quickStats: { label: string; title?: string; value: string }[] = [
-    {
-      label: "عدد الأفلام",
-      value: moviesLoading ? "—" : String(movies.length),
-    },
+  const ratingRow = [
     {
       label: "أعلى تقييم",
       title: highest?.title,
@@ -95,6 +91,9 @@ export default function Home() {
       title: lowest?.title,
       value: lowest ? Number(lowest.average_score).toFixed(1) : "—",
     },
+  ];
+
+  const runtimeRow = [
     {
       label: "أطول فلم",
       title: longest?.title,
@@ -113,22 +112,28 @@ export default function Home() {
         فقرة الموفي
       </h1>
 
-      <div className="grid w-full grid-cols-2 gap-3">
-        {quickStats.map((s, i) => (
-          <div
-            key={s.label}
-            className="animate-blur-fade-up liquid-glass flex min-h-[6.5rem] min-w-0 flex-col justify-center gap-1 rounded-xl px-4 py-3"
-            style={{ animationDelay: `${80 + i * 60}ms` }}
-          >
-            <p className="text-xs text-gray-400">{s.label}</p>
-            {s.title && (
-              <p className="line-clamp-2 text-sm leading-snug font-medium">
-                {s.title}
-              </p>
-            )}
-            <p className="text-xl font-semibold tabular-nums">{s.value}</p>
-          </div>
-        ))}
+      <div className="flex w-full flex-col items-center gap-3">
+        <div
+          className="animate-blur-fade-up liquid-glass w-full rounded-2xl px-6 py-5 text-center"
+          style={{ animationDelay: "80ms" }}
+        >
+          <p className="text-sm text-gray-400">عدد الأفلام</p>
+          <p className="mt-1 text-4xl font-semibold tabular-nums">
+            {moviesLoading ? "—" : movies.length}
+          </p>
+        </div>
+
+        <div className="grid w-full grid-cols-2 gap-3">
+          {ratingRow.map((s, i) => (
+            <StatTile key={s.label} stat={s} delayMs={140 + i * 60} />
+          ))}
+        </div>
+
+        <div className="grid w-full grid-cols-2 gap-3">
+          {runtimeRow.map((s, i) => (
+            <StatTile key={s.label} stat={s} delayMs={260 + i * 60} />
+          ))}
+        </div>
       </div>
 
       <div
@@ -154,5 +159,28 @@ export default function Home() {
         ))}
       </div>
     </main>
+  );
+}
+
+function StatTile({
+  stat,
+  delayMs,
+}: {
+  stat: { label: string; title?: string; value: string };
+  delayMs: number;
+}) {
+  return (
+    <div
+      className="animate-blur-fade-up liquid-glass flex min-h-[6.5rem] min-w-0 flex-col justify-center gap-1 rounded-xl px-4 py-3"
+      style={{ animationDelay: `${delayMs}ms` }}
+    >
+      <p className="text-xs text-gray-400">{stat.label}</p>
+      {stat.title && (
+        <p className="line-clamp-2 text-sm leading-snug font-medium">
+          {stat.title}
+        </p>
+      )}
+      <p className="text-xl font-semibold tabular-nums">{stat.value}</p>
+    </div>
   );
 }
