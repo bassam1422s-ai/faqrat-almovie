@@ -119,6 +119,34 @@ body {
 }
 
 /* ---------------------------------------------------------------------- */
+/* Liquid hero background — a giant, frosted-glass headline drifts deep   */
+/* behind the ribbon, crossing the screen left to right on a loop.        */
+/* ---------------------------------------------------------------------- */
+
+.liquid-marquee {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: max-content;
+  white-space: nowrap;
+  transform: translateY(-50%) translateX(-100%);
+  font-size: clamp(4rem, 16vw, 13rem);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.14);
+  filter: blur(7px);
+  animation: liquidMarquee 26s linear infinite;
+}
+
+@keyframes liquidMarquee {
+  from {
+    transform: translateY(-50%) translateX(-100%);
+  }
+  to {
+    transform: translateY(-50%) translateX(100vw);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
 /* Liquid hero background — a glossy purple/blue ribbon swept diagonally  */
 /* across the frame, with a bright rim-light streak layered on top.       */
 /* ---------------------------------------------------------------------- */
