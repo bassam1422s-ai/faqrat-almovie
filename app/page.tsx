@@ -116,13 +116,7 @@ export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center gap-8 px-4 pb-16 pt-8 text-center">
       <div className="flex flex-col items-center gap-4 pt-4 sm:pt-8">
-        <p className="animate-blur-fade-up text-xs tracking-widest text-white/60 sm:text-sm">
-          خمسة أصدقاء × فلم كل أسبوع
-        </p>
-        <h1
-          className="animate-blur-fade-up text-5xl leading-[0.85] font-medium tracking-tighter sm:text-6xl md:text-7xl"
-          style={{ animationDelay: "80ms" }}
-        >
+        <h1 className="animate-blur-fade-up text-5xl leading-[0.85] font-medium tracking-tighter sm:text-6xl md:text-7xl">
           <span className="block text-white">فقرة</span>
           <span className="block">
             <ShinyText>الموفي</ShinyText>
