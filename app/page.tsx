@@ -1,12 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { BarChart3, Clapperboard, LibraryBig, type LucideIcon } from "lucide-react";
+import {
+  ArrowLeft,
+  BarChart3,
+  Clapperboard,
+  LibraryBig,
+  type LucideIcon,
+} from "lucide-react";
 import { useParticipants } from "@/hooks/useParticipants";
 import { useCurrentParticipant } from "@/hooks/useCurrentParticipant";
 import { useMovieAverages } from "@/hooks/useMovieAverages";
 import { storeParticipant } from "@/lib/participant";
 import { NamePicker } from "@/components/NamePicker";
+import { ShinyText } from "@/components/ShinyText";
 import type { MovieAverage } from "@/lib/types";
 
 const SECTIONS: {
@@ -108,14 +115,36 @@ export default function Home() {
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center gap-8 px-4 pb-16 pt-8 text-center">
-      <h1 className="animate-blur-fade-up text-4xl font-medium sm:text-5xl">
-        فقرة الموفي
-      </h1>
+      <div className="flex flex-col items-center gap-4 pt-4 sm:pt-8">
+        <p className="animate-blur-fade-up text-xs tracking-widest text-white/60 sm:text-sm">
+          خمسة أصدقاء × فلم كل أسبوع
+        </p>
+        <h1
+          className="animate-blur-fade-up text-5xl leading-[0.85] font-medium tracking-tighter sm:text-6xl md:text-7xl"
+          style={{ animationDelay: "80ms" }}
+        >
+          <span className="block text-white">فقرة</span>
+          <span className="block">
+            <ShinyText>الموفي</ShinyText>
+          </span>
+        </h1>
+        <Link
+          href="/rating"
+          className="animate-blur-fade-up group mt-2 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-gray-200 md:px-8 md:py-4"
+          style={{ animationDelay: "160ms" }}
+        >
+          ابدأ فقرة التقييم
+          <ArrowLeft
+            size={18}
+            className="transition-transform group-hover:-translate-x-1"
+          />
+        </Link>
+      </div>
 
       <div className="flex w-full flex-col items-center gap-3">
         <div
           className="animate-blur-fade-up liquid-glass w-full rounded-2xl px-6 py-5 text-center"
-          style={{ animationDelay: "80ms" }}
+          style={{ animationDelay: "240ms" }}
         >
           <p className="text-sm text-gray-400">عدد الأفلام</p>
           <p className="mt-1 text-4xl font-semibold tabular-nums">
@@ -125,20 +154,20 @@ export default function Home() {
 
         <div className="grid w-full grid-cols-2 gap-3">
           {ratingRow.map((s, i) => (
-            <StatTile key={s.label} stat={s} delayMs={140 + i * 60} />
+            <StatTile key={s.label} stat={s} delayMs={300 + i * 60} />
           ))}
         </div>
 
         <div className="grid w-full grid-cols-2 gap-3">
           {runtimeRow.map((s, i) => (
-            <StatTile key={s.label} stat={s} delayMs={260 + i * 60} />
+            <StatTile key={s.label} stat={s} delayMs={420 + i * 60} />
           ))}
         </div>
       </div>
 
       <div
         className="animate-blur-fade-up"
-        style={{ animationDelay: "400ms" }}
+        style={{ animationDelay: "560ms" }}
       >
         <p className="text-gray-400">أهلاً</p>
         <p className="text-2xl font-medium">{participant.name}</p>
@@ -150,7 +179,7 @@ export default function Home() {
             key={href}
             href={href}
             className="animate-blur-fade-up liquid-glass flex flex-col items-center gap-3 rounded-2xl px-6 py-8 text-center hover:bg-white/5"
-            style={{ animationDelay: `${460 + i * 80}ms` }}
+            style={{ animationDelay: `${620 + i * 80}ms` }}
           >
             <Icon size={28} />
             <span className="text-lg font-medium">{label}</span>
