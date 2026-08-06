@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { HeroBackground } from "./HeroBackground";
+import { HeroSplineBackground } from "./HeroSplineBackground";
 import { LatestMovieBackdrop } from "./LatestMovieBackdrop";
 import { PosterSlideshowBackdrop } from "./PosterSlideshowBackdrop";
 
@@ -10,7 +10,7 @@ export function CinematicBackdrop() {
 
   return (
     <div className="fixed inset-0 z-0 overflow-hidden bg-black">
-      {pathname === "/" && <HeroBackground />}
+      {pathname === "/" && <HeroSplineBackground />}
       {pathname === "/rating" && <LatestMovieBackdrop />}
       {(pathname === "/archive" || pathname === "/stats") && (
         <PosterSlideshowBackdrop />

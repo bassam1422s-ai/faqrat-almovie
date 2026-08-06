@@ -90,30 +90,6 @@ body {
 }
 
 /* ---------------------------------------------------------------------- */
-/* Home hero background — drifting glow blobs behind the mouse spotlight  */
-/* ---------------------------------------------------------------------- */
-
-@keyframes heroDriftA {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  50% {
-    transform: translate(12%, 16%) scale(1.15);
-  }
-}
-
-@keyframes heroDriftB {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  50% {
-    transform: translate(-14%, -12%) scale(1.1);
-  }
-}
-
-/* ---------------------------------------------------------------------- */
 /* Shiny text — a light sweep animates continuously across the text fill  */
 /* ---------------------------------------------------------------------- */
 
