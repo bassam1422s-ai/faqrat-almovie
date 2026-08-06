@@ -71,7 +71,7 @@ export function FriendCoverflow({
   opacity = 60,
   transition = {
     duration: 0.6,
-    delay: 1.95,
+    delay: 2.5,
     ease: [0.22, 1, 0.36, 1],
   },
   autoplay = true,
