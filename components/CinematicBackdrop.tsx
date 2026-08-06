@@ -1,8 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { ErrorBoundary } from "./ErrorBoundary";
-import { HeroSplineBackground } from "./HeroSplineBackground";
+import { LiquidHeroBackground } from "./LiquidHeroBackground";
 import { LatestMovieBackdrop } from "./LatestMovieBackdrop";
 import { PosterSlideshowBackdrop } from "./PosterSlideshowBackdrop";
 
@@ -11,11 +10,7 @@ export function CinematicBackdrop() {
 
   return (
     <div className="fixed inset-0 z-0 overflow-hidden bg-black">
-      {pathname === "/" && (
-        <ErrorBoundary>
-          <HeroSplineBackground />
-        </ErrorBoundary>
-      )}
+      {pathname === "/" && <LiquidHeroBackground />}
       {pathname === "/rating" && <LatestMovieBackdrop />}
       {(pathname === "/archive" || pathname === "/stats") && (
         <PosterSlideshowBackdrop />

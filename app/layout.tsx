@@ -3,7 +3,6 @@ import { Inter, Tajawal } from "next/font/google";
 import "./globals.css";
 import { CinematicBackdrop } from "@/components/CinematicBackdrop";
 import { Navbar } from "@/components/Navbar";
-import { FriendCameo } from "@/components/FriendCameo";
 import { JoinRatingBanner } from "@/components/JoinRatingBanner";
 
 const inter = Inter({
@@ -46,7 +45,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         }}
       >
         <CinematicBackdrop />
-        <FriendCameo />
         <div className="relative z-10 flex min-h-screen flex-col">
           <Navbar />
           {children}

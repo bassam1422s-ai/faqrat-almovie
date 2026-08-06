@@ -14,7 +14,12 @@ import { useMovieAverages } from "@/hooks/useMovieAverages";
 import { storeParticipant } from "@/lib/participant";
 import { NamePicker } from "@/components/NamePicker";
 import { ShinyText } from "@/components/ShinyText";
+import { FriendCoverflow } from "@/components/FriendCoverflow";
 import type { MovieAverage } from "@/lib/types";
+
+const FRIEND_PHOTOS = Array.from({ length: 21 }, (_, i) => ({
+  image: { src: `/cameos/${i + 1}.jpg` },
+}));
 
 const SECTIONS: {
   href: string;
@@ -180,6 +185,13 @@ export default function Home() {
             <span className="text-sm text-gray-400">{description}</span>
           </Link>
         ))}
+      </div>
+
+      <div
+        className="animate-blur-fade-up relative left-1/2 right-1/2 -mx-[50vw] w-screen max-w-none"
+        style={{ animationDelay: "700ms" }}
+      >
+        <FriendCoverflow slides={FRIEND_PHOTOS} />
       </div>
     </main>
   );
