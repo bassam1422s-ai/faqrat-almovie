@@ -11,7 +11,11 @@ const CUBE_COLOR = "#e8e8ec";
 
 function handleLoad(spline: Application) {
   spline.getAllObjects().forEach((obj) => {
-    obj.color = CUBE_COLOR;
+    try {
+      obj.color = CUBE_COLOR;
+    } catch {
+      // Some object types (cameras, empties) don't support color — skip them.
+    }
   });
 }
 
