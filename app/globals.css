@@ -119,56 +119,54 @@ body {
 }
 
 /* ---------------------------------------------------------------------- */
-/* Liquid hero background — slow drifting purple/blue glow blobs          */
+/* Liquid hero background — a glossy purple/blue ribbon swept diagonally  */
+/* across the frame, with a bright rim-light streak layered on top.       */
 /* ---------------------------------------------------------------------- */
 
-@keyframes liquidDriftA {
+.liquid-ribbon,
+.liquid-ribbon-glow {
+  position: absolute;
+  left: 62%;
+  top: 55%;
+  width: 105vmax;
+  height: 30vmax;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(-18deg);
+  animation: liquidRibbonSway 26s ease-in-out infinite;
+}
+
+.liquid-ribbon {
+  background: linear-gradient(
+    100deg,
+    #05050c 0%,
+    #2e1065 22%,
+    #5b21b6 40%,
+    #4338ca 54%,
+    #3b82f6 70%,
+    #05050c 100%
+  );
+  filter: blur(20px);
+}
+
+.liquid-ribbon-glow {
+  background: linear-gradient(
+    100deg,
+    transparent 38%,
+    rgba(199, 210, 254, 0.35) 47%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(199, 210, 254, 0.35) 53%,
+    transparent 62%
+  );
+  mix-blend-mode: screen;
+  filter: blur(30px);
+}
+
+@keyframes liquidRibbonSway {
   0%,
   100% {
-    transform: translate(0, 0) scale(1);
+    transform: translate(-50%, -50%) rotate(-18deg) scale(1);
   }
-  33% {
-    transform: translate(10%, 8%) scale(1.12);
+  50% {
+    transform: translate(-48%, -52%) rotate(-22deg) scale(1.05);
   }
-  66% {
-    transform: translate(-6%, 12%) scale(0.94);
-  }
-}
-
-@keyframes liquidDriftB {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(-12%, 10%) scale(0.9);
-  }
-  66% {
-    transform: translate(8%, -6%) scale(1.1);
-  }
-}
-
-@keyframes liquidDriftC {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(8%, -10%) scale(1.08);
-  }
-  66% {
-    transform: translate(-10%, -4%) scale(0.95);
-  }
-}
-
-.liquid-blob-a {
-  animation: liquidDriftA 24s ease-in-out infinite;
-}
-
-.liquid-blob-b {
-  animation: liquidDriftB 28s ease-in-out infinite;
-}
-
-.liquid-blob-c {
-  animation: liquidDriftC 32s ease-in-out infinite;
 }
