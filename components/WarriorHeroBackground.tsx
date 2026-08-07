@@ -53,6 +53,9 @@ export function WarriorHeroBackground() {
           filter: "url(#capeWind)",
         }}
       />
+
+      <div className="liquid-silk liquid-silk-a" />
+      <div className="liquid-silk liquid-silk-b" />
     </div>
   );
 }
