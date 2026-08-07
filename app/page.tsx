@@ -188,7 +188,7 @@ export default function Home() {
       </div>
 
       <div
-        className="animate-blur-fade-up relative left-1/2 w-screen max-w-none -translate-x-1/2"
+        className="animate-blur-fade-up w-full"
         style={{ animationDelay: "700ms" }}
       >
         <FriendCoverflow slides={FRIEND_PHOTOS} />
