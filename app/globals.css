@@ -89,6 +89,25 @@ body {
   animation: blurFadeUp 1s ease-out forwards;
 }
 
+/* Blur-free variant for small text elements — mobile GPUs sometimes leave
+   a residual soft/blurry look on text after a filter:blur() animation
+   settles, even once it's technically finished. */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  opacity: 0;
+  animation: fadeUp 0.6s ease-out forwards;
+}
+
 /* ---------------------------------------------------------------------- */
 /* Shiny text — a light sweep animates continuously across the text fill  */
 /* ---------------------------------------------------------------------- */
@@ -155,7 +174,10 @@ body {
 }
 
 .shine-button {
-  position: relative;
+  /* No position here: the elements using this class already set their own
+     (fixed/relative/absolute) via Tailwind. Setting one here would silently
+     win over a same-specificity Tailwind position utility by source order
+     and break it (this bit us once already — see git history). */
   overflow: hidden;
 }
 

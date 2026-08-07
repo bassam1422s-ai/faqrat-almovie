@@ -129,7 +129,7 @@ export default function Home() {
         </h1>
         <Link
           href="/rating"
-          className="animate-blur-fade-up group mt-2 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-black shadow-xl shadow-black/50 transition-colors hover:bg-gray-200 md:px-8 md:py-4"
+          className="animate-fade-up group mt-2 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-black shadow-xl shadow-black/50 transition-colors hover:bg-gray-200 md:px-8 md:py-4"
           style={{ animationDelay: "160ms" }}
         >
           ابدأ فقرة التقييم
