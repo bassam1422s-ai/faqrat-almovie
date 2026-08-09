@@ -165,6 +165,17 @@ begin
 end;
 $$ language plpgsql security definer;
 
+-- Lets anyone abort an open round they started by mistake (e.g. picked the
+-- wrong movie), instead of being forced to complete a rating round with no
+-- way out. Only touches open rounds — a revealed round is real history and
+-- should go through delete_round in the archive instead.
+create or replace function cancel_round(p_round_id uuid) returns void as $$
+begin
+  delete from ratings where round_id = p_round_id;
+  delete from rounds where id = p_round_id and status = 'open';
+end;
+$$ language plpgsql security definer;
+
 -- ---------------------------------------------------------------------------
 -- Stats views
 -- ---------------------------------------------------------------------------

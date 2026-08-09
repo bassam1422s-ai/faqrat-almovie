@@ -9,6 +9,7 @@ type Props = {
   submittedIds: string[];
   requiredCount: number;
   onForceReveal: () => void;
+  onCancel: () => void;
 };
 
 export function RoundStatusBanner({
@@ -16,6 +17,7 @@ export function RoundStatusBanner({
   submittedIds,
   requiredCount,
   onForceReveal,
+  onCancel,
 }: Props) {
   const submittedSet = new Set(submittedIds);
 
@@ -41,16 +43,32 @@ export function RoundStatusBanner({
         })}
       </div>
 
-      <button
-        onClick={() => {
-          if (window.confirm("متأكد إنك تبي تكشف النتائج قبل ما يخلص الجميع؟")) {
-            onForceReveal();
-          }
-        }}
-        className="mt-5 text-sm text-gray-400 underline-offset-4 hover:text-white hover:underline"
-      >
-        كشف النتائج الآن
-      </button>
+      <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2">
+        <button
+          onClick={() => {
+            if (window.confirm("متأكد إنك تبي تكشف النتائج قبل ما يخلص الجميع؟")) {
+              onForceReveal();
+            }
+          }}
+          className="text-sm text-gray-400 underline-offset-4 hover:text-white hover:underline"
+        >
+          كشف النتائج الآن
+        </button>
+        <button
+          onClick={() => {
+            if (
+              window.confirm(
+                "متأكد إنك تبي تلغي هذي الفقرة؟ أي تقييمات اترسلت بتنحذف ولازم تبدأون فقرة جديدة.",
+              )
+            ) {
+              onCancel();
+            }
+          }}
+          className="text-sm text-red-400 underline-offset-4 hover:text-red-300 hover:underline"
+        >
+          إلغاء الفقرة
+        </button>
+      </div>
     </GlassCard>
   );
 }

@@ -120,6 +120,12 @@ function RoundView({
     refresh();
   }
 
+  async function cancelRound() {
+    if (!round) return;
+    await supabase.rpc("cancel_round", { p_round_id: round.id });
+    refresh();
+  }
+
   const showSearch = !round || startingNew;
 
   if (showSearch) {
@@ -168,6 +174,7 @@ function RoundView({
           submittedIds={submittedIds}
           requiredCount={round.required_count}
           onForceReveal={forceReveal}
+          onCancel={cancelRound}
         />
       </main>
     );
@@ -180,6 +187,20 @@ function RoundView({
       <GlassButton solid onClick={submitRating} disabled={submitting}>
         أرسل تقييمك
       </GlassButton>
+      <button
+        onClick={() => {
+          if (
+            window.confirm(
+              "متأكد إنك تبي تلغي هذي الفقرة؟ أي تقييمات اترسلت بتنحذف ولازم تبدأون فقرة جديدة.",
+            )
+          ) {
+            cancelRound();
+          }
+        }}
+        className="text-sm text-red-400 underline-offset-4 hover:text-red-300 hover:underline"
+      >
+        إلغاء الفقرة
+      </button>
     </main>
   );
 }
