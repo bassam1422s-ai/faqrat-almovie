@@ -6,6 +6,7 @@ import {
   BarChart3,
   Clapperboard,
   LibraryBig,
+  Tv,
   type LucideIcon,
 } from "lucide-react";
 import { useParticipants } from "@/hooks/useParticipants";
@@ -44,6 +45,12 @@ const SECTIONS: {
     label: "الأرشيف",
     description: "كل الأفلام اللي شفتوها",
     icon: LibraryBig,
+  },
+  {
+    href: "/shows",
+    label: "المسلسلات",
+    description: "مسلسلات كل واحد ووين وصل",
+    icon: Tv,
   },
 ];
 
@@ -172,7 +179,7 @@ export default function Home() {
         <p className="text-2xl font-medium">{participant.name}</p>
       </div>
 
-      <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid w-full grid-cols-2 gap-4 sm:grid-cols-4">
         {SECTIONS.map(({ href, label, description, icon: Icon }, i) => (
           <Link
             key={href}

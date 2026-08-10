@@ -316,3 +316,124 @@ create policy "ratings are readable only after reveal"
 -- ---------------------------------------------------------------------------
 
 alter publication supabase_realtime add table rounds;
+
+-- ---------------------------------------------------------------------------
+-- Shows — separate from the movie-night flow: everyone follows their own
+-- shows individually (no synchronized reveal), and just wants to see who's
+-- watching what, their opinion so far, and where they've each gotten to.
+-- ---------------------------------------------------------------------------
+
+create table shows (
+  id                uuid primary key default gen_random_uuid(),
+  tmdb_id           integer unique not null,
+  title             text not null,
+  poster_path       text,
+  backdrop_path     text,
+  first_air_year    integer,
+  overview          text,
+  vote_average      numeric(3,1),
+  number_of_seasons integer,
+  created_at        timestamptz not null default now()
+);
+
+create table show_entries (
+  id              uuid primary key default gen_random_uuid(),
+  show_id         uuid not null references shows(id),
+  participant_id  uuid not null references participants(id),
+  rating          numeric(3,1) check (rating is null or (rating >= 1 and rating <= 10)),
+  current_season  integer,
+  current_episode integer,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
+  unique (show_id, participant_id)
+);
+
+alter table shows enable row level security;
+alter table show_entries enable row level security;
+
+create policy "shows are publicly readable"
+  on shows for select using (true);
+
+create policy "show_entries are publicly readable"
+  on show_entries for select using (true);
+
+-- Ensures a show exists (cached from TMDB) and returns its id. Called once
+-- when someone searches up a new show to follow; a show already followed by
+-- someone else just gets its cached metadata refreshed, not duplicated.
+create or replace function add_show(
+  p_tmdb_id           integer,
+  p_title             text,
+  p_poster_path       text,
+  p_backdrop_path     text,
+  p_first_air_year    integer,
+  p_overview          text,
+  p_vote_average      numeric,
+  p_number_of_seasons integer
+) returns uuid as $$
+declare
+  v_show_id uuid;
+begin
+  insert into shows (tmdb_id, title, poster_path, backdrop_path, first_air_year, overview, vote_average, number_of_seasons)
+  values (p_tmdb_id, p_title, p_poster_path, p_backdrop_path, p_first_air_year, p_overview, p_vote_average, p_number_of_seasons)
+  on conflict (tmdb_id) do update
+    set title = excluded.title,
+        poster_path = excluded.poster_path,
+        backdrop_path = excluded.backdrop_path,
+        first_air_year = excluded.first_air_year,
+        overview = excluded.overview,
+        vote_average = excluded.vote_average,
+        number_of_seasons = excluded.number_of_seasons
+  returning id into v_show_id;
+
+  return v_show_id;
+end;
+$$ language plpgsql security definer;
+
+-- Sets (or updates) one participant's own rating/progress on a show. Used
+-- both for "I'm now following this too" and for updating where you're at.
+create or replace function update_show_entry(
+  p_show_id         uuid,
+  p_participant_id  uuid,
+  p_rating          numeric,
+  p_current_season  integer,
+  p_current_episode integer
+) returns void as $$
+begin
+  insert into show_entries (show_id, participant_id, rating, current_season, current_episode)
+  values (p_show_id, p_participant_id, p_rating, p_current_season, p_current_episode)
+  on conflict (show_id, participant_id) do update
+    set rating = excluded.rating,
+        current_season = excluded.current_season,
+        current_episode = excluded.current_episode,
+        updated_at = now();
+end;
+$$ language plpgsql security definer;
+
+-- Lets someone stop tracking a show they added by mistake or dropped —
+-- only ever touches their own entry, never anyone else's.
+create or replace function delete_show_entry(
+  p_show_id        uuid,
+  p_participant_id uuid
+) returns void as $$
+begin
+  delete from show_entries
+   where show_id = p_show_id and participant_id = p_participant_id;
+end;
+$$ language plpgsql security definer;
+
+-- One row per show with a tracker count, so the /shows list can render
+-- without pulling every participant's entry up front (those load on expand,
+-- same pattern as the movie archive).
+create view show_overview as
+select
+  s.id as show_id,
+  s.title,
+  s.poster_path,
+  s.backdrop_path,
+  s.first_air_year,
+  s.number_of_seasons,
+  count(se.id) as tracker_count,
+  max(se.updated_at) as last_updated_at
+from shows s
+left join show_entries se on se.show_id = s.id
+group by s.id, s.title, s.poster_path, s.backdrop_path, s.first_air_year, s.number_of_seasons;

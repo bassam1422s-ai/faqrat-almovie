@@ -72,3 +72,39 @@ export type ParticipantStats = {
   ratings_given: number;
   average_score_given: number | null;
 };
+
+export type TmdbTvSearchResult = {
+  tmdb_id: number;
+  title: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  first_air_year: number | null;
+  overview: string | null;
+  vote_average: number | null;
+};
+
+export type TmdbTvDetails = TmdbTvSearchResult & {
+  number_of_seasons: number | null;
+};
+
+export type ShowOverview = {
+  show_id: string;
+  title: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  first_air_year: number | null;
+  number_of_seasons: number | null;
+  tracker_count: number;
+  last_updated_at: string | null;
+};
+
+export type ShowEntry = {
+  id: string;
+  show_id: string;
+  participant_id: string;
+  rating: number | null;
+  current_season: number | null;
+  current_episode: number | null;
+  updated_at: string;
+  participants: Participant;
+};

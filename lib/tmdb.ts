@@ -1,4 +1,9 @@
-import type { TmdbMovieDetails, TmdbSearchResult } from "./types";
+import type {
+  TmdbMovieDetails,
+  TmdbSearchResult,
+  TmdbTvDetails,
+  TmdbTvSearchResult,
+} from "./types";
 
 const TMDB_API_BASE = "https://api.themoviedb.org/3";
 
@@ -73,6 +78,61 @@ export async function getMovieDetails(
     overview: item.overview,
     vote_average: item.vote_average,
     runtime_minutes: item.runtime,
+  };
+}
+
+type TmdbApiTvItem = {
+  id: number;
+  name: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  first_air_date: string | null;
+  overview: string | null;
+  vote_average: number | null;
+};
+
+export async function searchShows(
+  query: string,
+  signal?: AbortSignal,
+): Promise<TmdbTvSearchResult[]> {
+  const url = new URL(`${TMDB_API_BASE}/search/tv`);
+  url.searchParams.set("query", query);
+  url.searchParams.set("language", "ar");
+  url.searchParams.set("include_adult", "false");
+
+  const res = await fetch(url, { headers: authHeaders(), signal });
+  if (!res.ok) throw new Error(`TMDB search failed: ${res.status}`);
+  const data: { results: TmdbApiTvItem[] } = await res.json();
+
+  return data.results.slice(0, 12).map((item) => ({
+    tmdb_id: item.id,
+    title: item.name,
+    poster_path: item.poster_path,
+    backdrop_path: item.backdrop_path,
+    first_air_year: yearFromDate(item.first_air_date),
+    overview: item.overview,
+    vote_average: item.vote_average,
+  }));
+}
+
+export async function getShowDetails(tmdbId: number): Promise<TmdbTvDetails> {
+  const url = new URL(`${TMDB_API_BASE}/tv/${tmdbId}`);
+  url.searchParams.set("language", "ar");
+
+  const res = await fetch(url, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`TMDB details failed: ${res.status}`);
+  const item: TmdbApiTvItem & { number_of_seasons: number | null } =
+    await res.json();
+
+  return {
+    tmdb_id: item.id,
+    title: item.name,
+    poster_path: item.poster_path,
+    backdrop_path: item.backdrop_path,
+    first_air_year: yearFromDate(item.first_air_date),
+    overview: item.overview,
+    vote_average: item.vote_average,
+    number_of_seasons: item.number_of_seasons,
   };
 }
 
