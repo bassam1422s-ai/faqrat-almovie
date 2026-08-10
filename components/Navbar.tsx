@@ -32,7 +32,7 @@ export function Navbar() {
           فقرة الموفي
         </Link>
 
-        <div className="hidden items-center gap-6 text-sm lg:flex">
+        <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-6 text-sm lg:flex">
           {LINKS.map((link, i) => (
             <Link
               key={link.href}

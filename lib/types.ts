@@ -83,8 +83,15 @@ export type TmdbTvSearchResult = {
   vote_average: number | null;
 };
 
+export type TmdbTvSeason = {
+  season_number: number;
+  name: string;
+  episode_count: number;
+};
+
 export type TmdbTvDetails = TmdbTvSearchResult & {
   number_of_seasons: number | null;
+  seasons: TmdbTvSeason[];
 };
 
 export type ShowOverview = {
@@ -94,6 +101,7 @@ export type ShowOverview = {
   backdrop_path: string | null;
   first_air_year: number | null;
   number_of_seasons: number | null;
+  seasons: TmdbTvSeason[];
   tracker_count: number;
   last_updated_at: string | null;
 };

@@ -333,6 +333,10 @@ create table shows (
   overview          text,
   vote_average      numeric(3,1),
   number_of_seasons integer,
+  -- Cached from TMDB: [{ season_number, name, episode_count }, ...]. Lets the
+  -- progress editor offer a real "season X, episode Y of N" picker instead of
+  -- an unbounded number input, without re-hitting TMDB on every edit.
+  seasons           jsonb not null default '[]'::jsonb,
   created_at        timestamptz not null default now()
 );
 
@@ -368,13 +372,14 @@ create or replace function add_show(
   p_first_air_year    integer,
   p_overview          text,
   p_vote_average      numeric,
-  p_number_of_seasons integer
+  p_number_of_seasons integer,
+  p_seasons           jsonb default '[]'::jsonb
 ) returns uuid as $$
 declare
   v_show_id uuid;
 begin
-  insert into shows (tmdb_id, title, poster_path, backdrop_path, first_air_year, overview, vote_average, number_of_seasons)
-  values (p_tmdb_id, p_title, p_poster_path, p_backdrop_path, p_first_air_year, p_overview, p_vote_average, p_number_of_seasons)
+  insert into shows (tmdb_id, title, poster_path, backdrop_path, first_air_year, overview, vote_average, number_of_seasons, seasons)
+  values (p_tmdb_id, p_title, p_poster_path, p_backdrop_path, p_first_air_year, p_overview, p_vote_average, p_number_of_seasons, p_seasons)
   on conflict (tmdb_id) do update
     set title = excluded.title,
         poster_path = excluded.poster_path,
@@ -382,7 +387,8 @@ begin
         first_air_year = excluded.first_air_year,
         overview = excluded.overview,
         vote_average = excluded.vote_average,
-        number_of_seasons = excluded.number_of_seasons
+        number_of_seasons = excluded.number_of_seasons,
+        seasons = excluded.seasons
   returning id into v_show_id;
 
   return v_show_id;
@@ -432,8 +438,9 @@ select
   s.backdrop_path,
   s.first_air_year,
   s.number_of_seasons,
+  s.seasons,
   count(se.id) as tracker_count,
   max(se.updated_at) as last_updated_at
 from shows s
 left join show_entries se on se.show_id = s.id
-group by s.id, s.title, s.poster_path, s.backdrop_path, s.first_air_year, s.number_of_seasons;
+group by s.id, s.title, s.poster_path, s.backdrop_path, s.first_air_year, s.number_of_seasons, s.seasons;

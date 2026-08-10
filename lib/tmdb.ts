@@ -115,14 +115,22 @@ export async function searchShows(
   }));
 }
 
+type TmdbApiSeason = {
+  season_number: number;
+  name: string;
+  episode_count: number;
+};
+
 export async function getShowDetails(tmdbId: number): Promise<TmdbTvDetails> {
   const url = new URL(`${TMDB_API_BASE}/tv/${tmdbId}`);
   url.searchParams.set("language", "ar");
 
   const res = await fetch(url, { headers: authHeaders() });
   if (!res.ok) throw new Error(`TMDB details failed: ${res.status}`);
-  const item: TmdbApiTvItem & { number_of_seasons: number | null } =
-    await res.json();
+  const item: TmdbApiTvItem & {
+    number_of_seasons: number | null;
+    seasons: TmdbApiSeason[] | null;
+  } = await res.json();
 
   return {
     tmdb_id: item.id,
@@ -133,6 +141,14 @@ export async function getShowDetails(tmdbId: number): Promise<TmdbTvDetails> {
     overview: item.overview,
     vote_average: item.vote_average,
     number_of_seasons: item.number_of_seasons,
+    seasons: (item.seasons ?? [])
+      .filter((s) => s.season_number > 0)
+      .sort((a, b) => a.season_number - b.season_number)
+      .map((s) => ({
+        season_number: s.season_number,
+        name: s.name,
+        episode_count: s.episode_count,
+      })),
   };
 }
 

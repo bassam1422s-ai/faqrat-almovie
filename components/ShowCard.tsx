@@ -43,13 +43,36 @@ export function ShowCard({ show, participant, onChanged }: Props) {
 
   const myEntry = entries?.find((e) => e.participant_id === participant?.id);
 
+  const seasons = show.seasons ?? [];
+  const seasonOptions =
+    seasons.length > 0
+      ? seasons.map((s) => s.season_number)
+      : Array.from(
+          { length: show.number_of_seasons ?? 1 },
+          (_, i) => i + 1,
+        );
+  const episodeCount = seasons.find((s) => s.season_number === season)
+    ?.episode_count;
+  const episodeOptions = Array.from(
+    { length: episodeCount ?? 24 },
+    (_, i) => i + 1,
+  );
+
   function startEditing() {
-    setSeason(myEntry?.current_season ?? 1);
+    const initialSeason = myEntry?.current_season ?? 1;
+    setSeason(initialSeason);
     setEpisode(myEntry?.current_episode ?? 1);
     setHasRating(myEntry?.rating != null);
     setRating(myEntry?.rating ?? 7);
     setError(null);
     setEditing(true);
+  }
+
+  function handleSeasonChange(next: number) {
+    setSeason(next);
+    const nextCount = seasons.find((s) => s.season_number === next)
+      ?.episode_count;
+    if (nextCount && episode > nextCount) setEpisode(1);
   }
 
   async function handleSave() {
@@ -135,7 +158,12 @@ export function ShowCard({ show, participant, onChanged }: Props) {
               <span className="text-gray-300">{e.participants.name}</span>
               <span className="text-gray-400">
                 {e.current_season != null && e.current_episode != null
-                  ? `الموسم ${e.current_season} · الحلقة ${e.current_episode}`
+                  ? (() => {
+                      const total = seasons.find(
+                        (s) => s.season_number === e.current_season,
+                      )?.episode_count;
+                      return `الموسم ${e.current_season} · الحلقة ${e.current_episode}${total ? ` من ${total}` : ""}`;
+                    })()
                   : "لسا ما بدأ"}
               </span>
               <span className="tabular-nums font-medium">
@@ -159,23 +187,31 @@ export function ShowCard({ show, participant, onChanged }: Props) {
               <div className="flex items-center gap-3">
                 <label className="flex flex-col items-center gap-1 text-xs text-gray-400">
                   الموسم
-                  <input
-                    type="number"
-                    min={1}
+                  <select
                     value={season}
-                    onChange={(e) => setSeason(Number(e.target.value) || 1)}
-                    className="liquid-glass w-16 rounded-full px-2 py-1.5 text-center tabular-nums focus:outline-none"
-                  />
+                    onChange={(e) => handleSeasonChange(Number(e.target.value))}
+                    className="liquid-glass w-20 rounded-full px-2 py-1.5 text-center tabular-nums focus:outline-none"
+                  >
+                    {seasonOptions.map((s) => (
+                      <option key={s} value={s} className="bg-black">
+                        {s}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label className="flex flex-col items-center gap-1 text-xs text-gray-400">
                   الحلقة
-                  <input
-                    type="number"
-                    min={1}
+                  <select
                     value={episode}
-                    onChange={(e) => setEpisode(Number(e.target.value) || 1)}
-                    className="liquid-glass w-16 rounded-full px-2 py-1.5 text-center tabular-nums focus:outline-none"
-                  />
+                    onChange={(e) => setEpisode(Number(e.target.value))}
+                    className="liquid-glass w-20 rounded-full px-2 py-1.5 text-center tabular-nums focus:outline-none"
+                  >
+                    {episodeOptions.map((e) => (
+                      <option key={e} value={e} className="bg-black">
+                        {e}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               </div>
 

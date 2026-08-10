@@ -20,6 +20,10 @@ export default function ShowsPage() {
   const [searching, setSearching] = useState(false);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [filterId, setFilterId] = useState<string | null>(null);
+  const [filteredShowIds, setFilteredShowIds] = useState<Set<string> | null>(
+    null,
+  );
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -35,6 +39,26 @@ export default function ShowsPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (!filterId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFilteredShowIds(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from("show_entries")
+      .select("show_id")
+      .eq("participant_id", filterId)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setFilteredShowIds(new Set((data ?? []).map((e) => e.show_id as string)));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filterId]);
+
   async function handlePick(show: TmdbTvDetails) {
     if (!participant) return;
     setAdding(true);
@@ -48,6 +72,7 @@ export default function ShowsPage() {
       p_overview: show.overview,
       p_vote_average: show.vote_average,
       p_number_of_seasons: show.number_of_seasons,
+      p_seasons: show.seasons,
     });
     if (error || !showId) {
       setAdding(false);
@@ -85,6 +110,10 @@ export default function ShowsPage() {
     );
   }
 
+  const visibleShows = filteredShowIds
+    ? shows.filter((s) => filteredShowIds.has(s.show_id))
+    : shows;
+
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 pb-16 pt-4">
       <div className="flex items-center justify-between">
@@ -109,13 +138,42 @@ export default function ShowsPage() {
         </div>
       )}
 
+      {participants.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setFilterId(null)}
+            className={`liquid-glass rounded-full px-4 py-1.5 text-sm transition-colors ${
+              filterId === null ? "bg-white text-black" : "text-gray-300"
+            }`}
+          >
+            الكل
+          </button>
+          {participants.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setFilterId(p.id)}
+              className={`liquid-glass rounded-full px-4 py-1.5 text-sm transition-colors ${
+                filterId === p.id ? "bg-white text-black" : "text-gray-300"
+              }`}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {loading && <p className="text-gray-400">جاري التحميل...</p>}
       {!loading && shows.length === 0 && (
         <p className="text-gray-400">ما فيه مسلسلات بعد — أضف أول وحد!</p>
       )}
+      {!loading && shows.length > 0 && visibleShows.length === 0 && (
+        <p className="text-gray-400">
+          {participants.find((p) => p.id === filterId)?.name} ما يتابع أي مسلسل بعد
+        </p>
+      )}
 
       <div className="flex flex-col gap-3">
-        {shows.map((show) => (
+        {visibleShows.map((show) => (
           <ShowCard
             key={show.show_id}
             show={show}
