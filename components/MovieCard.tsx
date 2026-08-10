@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { ChevronDown, Star, Trash2 } from "lucide-react";
 import { tmdbImageUrl } from "@/lib/tmdb";
-import { useCurrentParticipant } from "@/hooks/useCurrentParticipant";
-import { RatingInput } from "./RatingInput";
 import type { MovieAverage, Rating } from "@/lib/types";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -12,33 +10,26 @@ type Props = {
   movie: MovieAverage;
   rank: number;
   onDeleted: (roundId: string) => void;
-  onRated: () => void;
 };
 
-export function MovieCard({ movie, rank, onDeleted, onRated }: Props) {
-  const { participant } = useCurrentParticipant();
+export function MovieCard({ movie, rank, onDeleted }: Props) {
   const [open, setOpen] = useState(false);
   const [ratings, setRatings] = useState<Rating[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [lateScore, setLateScore] = useState(7);
-  const [submittingLate, setSubmittingLate] = useState(false);
-  const [lateError, setLateError] = useState<string | null>(null);
-
-  async function loadRatings() {
-    setLoading(true);
-    const { data } = await supabase
-      .from("ratings")
-      .select("*, participants(*)")
-      .eq("round_id", movie.round_id)
-      .order("score", { ascending: false });
-    setRatings((data as unknown as Rating[]) ?? []);
-    setLoading(false);
-  }
 
   async function toggle() {
-    if (!open && ratings === null) await loadRatings();
+    if (!open && ratings === null) {
+      setLoading(true);
+      const { data } = await supabase
+        .from("ratings")
+        .select("*, participants(*)")
+        .eq("round_id", movie.round_id)
+        .order("score", { ascending: false });
+      setRatings((data as unknown as Rating[]) ?? []);
+      setLoading(false);
+    }
     setOpen((v) => !v);
   }
 
@@ -63,26 +54,7 @@ export function MovieCard({ movie, rank, onDeleted, onRated }: Props) {
     onDeleted(movie.round_id);
   }
 
-  async function handleLateSubmit() {
-    if (!participant) return;
-    setSubmittingLate(true);
-    setLateError(null);
-    const { error } = await supabase.rpc("submit_late_rating", {
-      p_round_id: movie.round_id,
-      p_participant_id: participant.id,
-      p_score: lateScore,
-    });
-    setSubmittingLate(false);
-    if (error) {
-      setLateError(error.message);
-      return;
-    }
-    await loadRatings();
-    onRated();
-  }
-
   const poster = tmdbImageUrl(movie.poster_path, "w500");
-  const myRating = ratings?.find((r) => r.participant_id === participant?.id);
 
   return (
     <div className="liquid-glass overflow-hidden rounded-2xl">
@@ -127,25 +99,6 @@ export function MovieCard({ movie, rank, onDeleted, onRated }: Props) {
               </span>
             </div>
           ))}
-
-          {participant && !loading && !myRating && (
-            <div className="mt-3 flex flex-col items-center gap-3 rounded-xl bg-white/5 px-3 py-4">
-              <p className="text-sm text-gray-300">
-                ما قيّمت هذا الفلم — فاتك يوم شفتوه؟
-              </p>
-              <RatingInput value={lateScore} onChange={setLateScore} />
-              <button
-                onClick={handleLateSubmit}
-                disabled={submittingLate}
-                className="rounded-full bg-white px-5 py-2 text-sm font-medium text-black hover:bg-gray-200 disabled:opacity-50"
-              >
-                {submittingLate ? "جاري الإرسال..." : "قيّم الفلم"}
-              </button>
-              {lateError && (
-                <p className="text-xs text-red-400">{lateError}</p>
-              )}
-            </div>
-          )}
 
           <button
             onClick={handleDelete}
