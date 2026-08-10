@@ -77,7 +77,7 @@ export function MovieCard({ movie, rank, onDeleted }: Props) {
         </div>
         <div className="flex shrink-0 items-center gap-1 text-lg font-medium tabular-nums">
           <Star size={16} className="fill-white text-white" />
-          {Number(movie.average_score).toFixed(1)}
+          {movie.average_score != null ? Number(movie.average_score).toFixed(1) : "—"}
         </div>
         <ChevronDown
           size={18}

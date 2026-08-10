@@ -72,7 +72,9 @@ export default function ArchivePage() {
 
   const sorted =
     sortMode === "ranking"
-      ? [...ratedMovies].sort((a, b) => b.average_score - a.average_score)
+      ? [...ratedMovies].sort(
+          (a, b) => (b.average_score ?? 0) - (a.average_score ?? 0),
+        )
       : ratedMovies;
 
   return (

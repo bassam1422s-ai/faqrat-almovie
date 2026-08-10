@@ -61,7 +61,7 @@ export type MovieAverage = {
   release_year: number | null;
   round_id: string;
   revealed_at: string;
-  average_score: number;
+  average_score: number | null;
   rating_count: number;
   runtime_minutes: number | null;
 };

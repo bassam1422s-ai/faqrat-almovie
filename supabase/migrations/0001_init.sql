@@ -203,6 +203,53 @@ begin
 end;
 $$ language plpgsql security definer;
 
+-- Bulk-logs a movie the group already watched before using the app, with no
+-- ratings attached — it shows up as "unrated" for everyone (movie_averages
+-- below is a left join, so zero ratings just means a null average) until
+-- people rate it via submit_late_rating from the archive. Idempotent: if the
+-- movie already has a round, returns the existing one instead of duplicating.
+create or replace function import_watched_movie(
+  p_tmdb_id         integer,
+  p_title           text,
+  p_poster_path     text,
+  p_backdrop_path   text,
+  p_release_year    integer,
+  p_overview        text,
+  p_vote_average    numeric,
+  p_runtime_minutes integer
+) returns uuid as $$
+declare
+  v_movie_id uuid;
+  v_round_id uuid;
+  v_required integer;
+begin
+  insert into movies (tmdb_id, title, poster_path, backdrop_path, release_year, overview, vote_average, runtime_minutes)
+  values (p_tmdb_id, p_title, p_poster_path, p_backdrop_path, p_release_year, p_overview, p_vote_average, p_runtime_minutes)
+  on conflict (tmdb_id) do update
+    set title = excluded.title,
+        poster_path = excluded.poster_path,
+        backdrop_path = excluded.backdrop_path,
+        release_year = excluded.release_year,
+        overview = excluded.overview,
+        vote_average = excluded.vote_average,
+        runtime_minutes = excluded.runtime_minutes
+  returning id into v_movie_id;
+
+  select id into v_round_id from rounds where movie_id = v_movie_id limit 1;
+  if v_round_id is not null then
+    return v_round_id;
+  end if;
+
+  select count(*) into v_required from participants where active;
+
+  insert into rounds (movie_id, status, required_count, revealed_at)
+  values (v_movie_id, 'revealed', v_required, now())
+  returning id into v_round_id;
+
+  return v_round_id;
+end;
+$$ language plpgsql security definer;
+
 -- ---------------------------------------------------------------------------
 -- Stats views
 -- ---------------------------------------------------------------------------
@@ -221,7 +268,7 @@ select
   m.runtime_minutes
 from movies m
 join rounds r on r.movie_id = m.id and r.status = 'revealed'
-join ratings rt on rt.round_id = r.id
+left join ratings rt on rt.round_id = r.id
 group by m.id, m.title, m.poster_path, m.backdrop_path, m.release_year, r.id, r.revealed_at, m.runtime_minutes;
 
 create view participant_stats as

@@ -23,9 +23,11 @@ export default function StatsPage() {
 
   const loading = statsLoading || moviesLoading;
 
+  const ratedMovies = movies.filter((m) => m.average_score != null);
   const overallAverage =
-    movies.length > 0
-      ? movies.reduce((sum, m) => sum + Number(m.average_score), 0) / movies.length
+    ratedMovies.length > 0
+      ? ratedMovies.reduce((sum, m) => sum + Number(m.average_score), 0) /
+        ratedMovies.length
       : null;
 
   return (
