@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { MovieCard } from "@/components/MovieCard";
 import type { MovieAverage } from "@/lib/types";
@@ -12,17 +12,19 @@ export default function ArchivePage() {
   const [loading, setLoading] = useState(true);
   const [sortMode, setSortMode] = useState<SortMode>("recent");
 
-  useEffect(() => {
-    async function load() {
-      const { data } = await supabase
-        .from("movie_averages")
-        .select("*")
-        .order("revealed_at", { ascending: false });
-      setMovies((data as MovieAverage[]) ?? []);
-      setLoading(false);
-    }
-    load();
+  const load = useCallback(async () => {
+    const { data } = await supabase
+      .from("movie_averages")
+      .select("*")
+      .order("revealed_at", { ascending: false });
+    setMovies((data as MovieAverage[]) ?? []);
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
 
   const sorted =
     sortMode === "ranking"
@@ -65,6 +67,7 @@ export default function ArchivePage() {
             movie={movie}
             rank={i + 1}
             onDeleted={handleDeleted}
+            onRated={load}
           />
         ))}
       </div>

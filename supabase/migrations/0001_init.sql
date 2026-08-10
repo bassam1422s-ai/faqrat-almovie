@@ -65,6 +65,8 @@ select round_id, participant_id from ratings;
 
 create or replace function handle_new_rating() returns trigger as $$
 begin
+  -- Scoped to status = 'open' so a late rating submitted after reveal (see
+  -- submit_late_rating below) doesn't re-bump submitted_count/revealed_at.
   update rounds
      set submitted_count = submitted_count + 1,
          status = case
@@ -75,7 +77,8 @@ begin
            when submitted_count + 1 >= required_count then now()
            else revealed_at
          end
-   where id = new.round_id;
+   where id = new.round_id
+     and status = 'open';
   return new;
 end;
 $$ language plpgsql security definer;
@@ -173,6 +176,30 @@ create or replace function cancel_round(p_round_id uuid) returns void as $$
 begin
   delete from ratings where round_id = p_round_id;
   delete from rounds where id = p_round_id and status = 'open';
+end;
+$$ language plpgsql security definer;
+
+-- Lets someone who missed the live round (forgot their phone, wasn't there)
+-- add their score afterwards from the archive. Only allowed on revealed
+-- rounds, and only once per participant — the handle_new_rating trigger is
+-- scoped to status = 'open' so this can't re-trigger a reveal or bump
+-- revealed_at.
+create or replace function submit_late_rating(
+  p_round_id       uuid,
+  p_participant_id uuid,
+  p_score          numeric
+) returns void as $$
+begin
+  if not exists (select 1 from rounds where id = p_round_id and status = 'revealed') then
+    raise exception 'ROUND_NOT_REVEALED' using errcode = 'P0001';
+  end if;
+
+  if exists (select 1 from ratings where round_id = p_round_id and participant_id = p_participant_id) then
+    raise exception 'ALREADY_RATED' using errcode = 'P0001';
+  end if;
+
+  insert into ratings (round_id, participant_id, score)
+  values (p_round_id, p_participant_id, p_score);
 end;
 $$ language plpgsql security definer;
 
