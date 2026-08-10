@@ -106,11 +106,11 @@ export function FriendCoverflow({
 
   const handleCardClick = useCallback(
     (i: number) => {
-      if (autoplay || lockRef.current) return;
+      if (lockRef.current) return;
       lock();
       setActive((a) => (i === a ? (a + 1) % n : i));
     },
-    [autoplay, n, lock],
+    [n, lock],
   );
 
   const delay = typeof transition.delay === "number" ? transition.delay : 2.5;
@@ -174,8 +174,8 @@ export function FriendCoverflow({
             transform: `translate(-50%, -50%) translateX(${tx}px) translateZ(${tz}px) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${sc})`,
             transition: transitionCss,
             opacity: visible ? 1 : 0,
-            cursor: autoplay || isActive ? "default" : "pointer",
-            pointerEvents: visible && !autoplay ? "auto" : "none",
+            cursor: isActive ? "default" : "pointer",
+            pointerEvents: visible ? "auto" : "none",
             backgroundColor: "#1a1a1a",
           };
 
