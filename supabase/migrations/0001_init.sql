@@ -438,9 +438,9 @@ select
   s.backdrop_path,
   s.first_air_year,
   s.number_of_seasons,
-  s.seasons,
   count(se.id) as tracker_count,
-  max(se.updated_at) as last_updated_at
+  max(se.updated_at) as last_updated_at,
+  s.seasons
 from shows s
 left join show_entries se on se.show_id = s.id
 group by s.id, s.title, s.poster_path, s.backdrop_path, s.first_air_year, s.number_of_seasons, s.seasons;
