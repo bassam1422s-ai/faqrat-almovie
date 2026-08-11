@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Star, Trash2 } from "lucide-react";
+import { ChevronDown, Star, Trash2, X } from "lucide-react";
 import { tmdbImageUrl } from "@/lib/tmdb";
 import { participantDotColor } from "@/lib/participantColor";
 import type { MovieAverage, Rating } from "@/lib/types";
@@ -19,6 +19,7 @@ export function MovieCard({ movie, rank, onDeleted }: Props) {
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [posterOpen, setPosterOpen] = useState(false);
 
   async function toggle() {
     if (!open && ratings === null) {
@@ -56,35 +57,45 @@ export function MovieCard({ movie, rank, onDeleted }: Props) {
   }
 
   const poster = tmdbImageUrl(movie.poster_path, "w500");
+  const posterLarge = tmdbImageUrl(movie.poster_path, "original");
 
   return (
     <div className="liquid-glass overflow-hidden rounded-2xl">
-      <button
-        onClick={toggle}
-        className="flex w-full items-center gap-4 p-3 text-right"
-      >
+      <div className="flex w-full items-center gap-4 p-3 text-right">
         <span className="w-6 shrink-0 text-center text-sm text-gray-500">
           {rank}
         </span>
-        <div className="h-20 w-14 shrink-0 overflow-hidden rounded-lg bg-white/10">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (poster) setPosterOpen(true);
+          }}
+          className="h-20 w-14 shrink-0 overflow-hidden rounded-lg bg-white/10"
+          aria-label="كبّر البوستر"
+        >
           {poster && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={poster} alt="" className="h-full w-full object-cover" />
           )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">{movie.title}</p>
-          <p className="text-sm text-gray-400">{movie.release_year ?? ""}</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-1 text-lg font-medium tabular-nums">
-          <Star size={16} className="fill-white text-white" />
-          {movie.average_score != null ? Number(movie.average_score).toFixed(1) : "—"}
-        </div>
-        <ChevronDown
-          size={18}
-          className={`shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
+        </button>
+        <button
+          onClick={toggle}
+          className="flex min-w-0 flex-1 items-center gap-4 text-right"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-medium">{movie.title}</p>
+            <p className="text-sm text-gray-400">{movie.release_year ?? ""}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1 text-lg font-medium tabular-nums">
+            <Star size={16} className="fill-white text-white" />
+            {movie.average_score != null ? Number(movie.average_score).toFixed(1) : "—"}
+          </div>
+          <ChevronDown
+            size={18}
+            className={`shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+      </div>
 
       {open && (
         <div className="border-t border-white/10 p-3">
@@ -117,6 +128,28 @@ export function MovieCard({ movie, rank, onDeleted }: Props) {
           {deleteError && (
             <p className="px-2 pb-1 text-xs text-red-400">{deleteError}</p>
           )}
+        </div>
+      )}
+
+      {posterOpen && posterLarge && (
+        <div
+          onClick={() => setPosterOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+        >
+          <button
+            onClick={() => setPosterOpen(false)}
+            className="liquid-glass absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full"
+            aria-label="إغلاق"
+          >
+            <X size={18} />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={posterLarge}
+            alt={movie.title}
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl"
+          />
         </div>
       )}
     </div>

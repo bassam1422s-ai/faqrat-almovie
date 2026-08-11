@@ -34,6 +34,23 @@ type TmdbApiSearchItem = {
   vote_average: number | null;
 };
 
+// Movie titles are always kept in English (regardless of the film's original
+// language) while overview/etc stay in Arabic — a second en-US request just
+// for the title, merged by tmdb_id into the Arabic-language result.
+async function fetchEnglishTitles(
+  url: URL,
+  signal?: AbortSignal,
+): Promise<Map<number, string>> {
+  const enUrl = new URL(url);
+  enUrl.searchParams.set("language", "en-US");
+  const res = await fetch(enUrl, { headers: authHeaders(), signal });
+  if (!res.ok) return new Map();
+  const data: { results?: TmdbApiSearchItem[] } & Partial<TmdbApiSearchItem> =
+    await res.json();
+  const items = data.results ?? (data.id != null ? [data as TmdbApiSearchItem] : []);
+  return new Map(items.map((item) => [item.id, item.title]));
+}
+
 export async function searchMovies(
   query: string,
   signal?: AbortSignal,
@@ -43,13 +60,16 @@ export async function searchMovies(
   url.searchParams.set("language", "ar");
   url.searchParams.set("include_adult", "false");
 
-  const res = await fetch(url, { headers: authHeaders(), signal });
+  const [res, englishTitles] = await Promise.all([
+    fetch(url, { headers: authHeaders(), signal }),
+    fetchEnglishTitles(url, signal),
+  ]);
   if (!res.ok) throw new Error(`TMDB search failed: ${res.status}`);
   const data: { results: TmdbApiSearchItem[] } = await res.json();
 
   return data.results.slice(0, 12).map((item) => ({
     tmdb_id: item.id,
-    title: item.title,
+    title: englishTitles.get(item.id) ?? item.title,
     poster_path: item.poster_path,
     backdrop_path: item.backdrop_path,
     release_year: yearFromDate(item.release_date),
@@ -64,14 +84,17 @@ export async function getMovieDetails(
   const url = new URL(`${TMDB_API_BASE}/movie/${tmdbId}`);
   url.searchParams.set("language", "ar");
 
-  const res = await fetch(url, { headers: authHeaders() });
+  const [res, englishTitles] = await Promise.all([
+    fetch(url, { headers: authHeaders() }),
+    fetchEnglishTitles(url),
+  ]);
   if (!res.ok) throw new Error(`TMDB details failed: ${res.status}`);
   const item: TmdbApiSearchItem & { runtime: number | null } =
     await res.json();
 
   return {
     tmdb_id: item.id,
-    title: item.title,
+    title: englishTitles.get(item.id) ?? item.title,
     poster_path: item.poster_path,
     backdrop_path: item.backdrop_path,
     release_year: yearFromDate(item.release_date),
