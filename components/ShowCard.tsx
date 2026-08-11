@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, ChevronDown, Pencil, Tv, Trash2 } from "lucide-react";
 import { tmdbImageUrl } from "@/lib/tmdb";
+import { participantDotColor } from "@/lib/participantColor";
 import { supabase } from "@/lib/supabaseClient";
 import { RatingInput } from "./RatingInput";
 import type { ShowEntry, ShowOverview } from "@/lib/types";
@@ -178,22 +179,32 @@ export function ShowCard({ show, participant, onChanged }: Props) {
           {entries?.map((e) => (
             <div
               key={e.id}
-              className="flex items-center justify-between px-2 py-1.5 text-sm"
+              className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-2 py-1.5 text-sm"
             >
-              <span className="text-gray-300">{e.participants.name}</span>
-              <span className="text-gray-400">
-                {e.finished
-                  ? "خلصه ✅"
-                  : e.current_season != null && e.current_episode != null
-                    ? (() => {
-                        const total = seasons.find(
-                          (s) => s.season_number === e.current_season,
-                        )?.episode_count;
-                        return `الموسم ${e.current_season} · الحلقة ${e.current_episode}${total ? ` من ${total}` : ""}`;
-                      })()
-                    : "لسا ما بدأ"}
+              <span className="flex min-w-0 items-center gap-2 text-gray-300">
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${participantDotColor(e.participant_id)}`}
+                />
+                <span className="truncate">{e.participants.name}</span>
               </span>
-              <span className="tabular-nums font-medium">
+              <span className="whitespace-nowrap text-gray-400">
+                {e.finished ? (
+                  <span className="flex items-center gap-1 text-white">
+                    <Check size={14} className="check-draw" />
+                    خلصه
+                  </span>
+                ) : e.current_season != null && e.current_episode != null ? (
+                  (() => {
+                    const total = seasons.find(
+                      (s) => s.season_number === e.current_season,
+                    )?.episode_count;
+                    return `الموسم ${e.current_season} · الحلقة ${e.current_episode}${total ? ` من ${total}` : ""}`;
+                  })()
+                ) : (
+                  "لسا ما بدأ"
+                )}
+              </span>
+              <span className="w-10 shrink-0 text-right tabular-nums font-medium">
                 {e.rating != null ? Number(e.rating).toFixed(1) : "—"}
               </span>
             </div>

@@ -198,3 +198,24 @@ body {
   pointer-events: none;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Check draw — a checkmark traces itself in once on mount, monochrome    */
+/* (used for the "finished watching" badge instead of a colored emoji).   */
+/* ---------------------------------------------------------------------- */
+
+@keyframes checkDraw {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.check-draw polyline,
+.check-draw path {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: checkDraw 0.5s ease-out forwards;
+}
+

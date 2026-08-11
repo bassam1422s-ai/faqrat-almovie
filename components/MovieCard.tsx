@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, Star, Trash2 } from "lucide-react";
 import { tmdbImageUrl } from "@/lib/tmdb";
+import { participantDotColor } from "@/lib/participantColor";
 import type { MovieAverage, Rating } from "@/lib/types";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -91,10 +92,15 @@ export function MovieCard({ movie, rank, onDeleted }: Props) {
           {ratings?.map((r) => (
             <div
               key={r.id}
-              className="flex items-center justify-between px-2 py-1.5 text-sm"
+              className="grid grid-cols-[1fr_auto] items-center gap-3 px-2 py-1.5 text-sm"
             >
-              <span className="text-gray-300">{r.participants.name}</span>
-              <span className="tabular-nums font-medium">
+              <span className="flex min-w-0 items-center gap-2 text-gray-300">
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${participantDotColor(r.participant_id)}`}
+                />
+                <span className="truncate">{r.participants.name}</span>
+              </span>
+              <span className="w-10 shrink-0 text-right tabular-nums font-medium">
                 {Number(r.score).toFixed(1)}
               </span>
             </div>
