@@ -337,6 +337,9 @@ create table shows (
   -- progress editor offer a real "season X, episode Y of N" picker instead of
   -- an unbounded number input, without re-hitting TMDB on every edit.
   seasons           jsonb not null default '[]'::jsonb,
+  -- Whoever added the show is the only one allowed to delete it entirely
+  -- (delete_show below) — null for shows added before this column existed.
+  added_by          uuid references participants(id),
   created_at        timestamptz not null default now()
 );
 
@@ -347,6 +350,7 @@ create table show_entries (
   rating          numeric(3,1) check (rating is null or (rating >= 1 and rating <= 10)),
   current_season  integer,
   current_episode integer,
+  finished        boolean not null default false,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
   unique (show_id, participant_id)
@@ -373,13 +377,16 @@ create or replace function add_show(
   p_overview          text,
   p_vote_average      numeric,
   p_number_of_seasons integer,
-  p_seasons           jsonb default '[]'::jsonb
+  p_seasons           jsonb default '[]'::jsonb,
+  p_added_by          uuid default null
 ) returns uuid as $$
 declare
   v_show_id uuid;
 begin
-  insert into shows (tmdb_id, title, poster_path, backdrop_path, first_air_year, overview, vote_average, number_of_seasons, seasons)
-  values (p_tmdb_id, p_title, p_poster_path, p_backdrop_path, p_first_air_year, p_overview, p_vote_average, p_number_of_seasons, p_seasons)
+  insert into shows (tmdb_id, title, poster_path, backdrop_path, first_air_year, overview, vote_average, number_of_seasons, seasons, added_by)
+  values (p_tmdb_id, p_title, p_poster_path, p_backdrop_path, p_first_air_year, p_overview, p_vote_average, p_number_of_seasons, p_seasons, p_added_by)
+  -- added_by is intentionally left out of the update clause below: if the
+  -- show already exists, whoever added it first stays the owner.
   on conflict (tmdb_id) do update
     set title = excluded.title,
         poster_path = excluded.poster_path,
@@ -402,15 +409,17 @@ create or replace function update_show_entry(
   p_participant_id  uuid,
   p_rating          numeric,
   p_current_season  integer,
-  p_current_episode integer
+  p_current_episode integer,
+  p_finished        boolean default false
 ) returns void as $$
 begin
-  insert into show_entries (show_id, participant_id, rating, current_season, current_episode)
-  values (p_show_id, p_participant_id, p_rating, p_current_season, p_current_episode)
+  insert into show_entries (show_id, participant_id, rating, current_season, current_episode, finished)
+  values (p_show_id, p_participant_id, p_rating, p_current_season, p_current_episode, p_finished)
   on conflict (show_id, participant_id) do update
     set rating = excluded.rating,
         current_season = excluded.current_season,
         current_episode = excluded.current_episode,
+        finished = excluded.finished,
         updated_at = now();
 end;
 $$ language plpgsql security definer;
@@ -427,6 +436,25 @@ begin
 end;
 $$ language plpgsql security definer;
 
+-- Deletes a show entirely (and everyone's tracking entries on it), but only
+-- for whoever originally added it — prevents someone from wiping a show
+-- other people are actively tracking.
+create or replace function delete_show(
+  p_show_id        uuid,
+  p_participant_id uuid
+) returns void as $$
+begin
+  if not exists (
+    select 1 from shows where id = p_show_id and added_by = p_participant_id
+  ) then
+    raise exception 'NOT_OWNER' using errcode = 'P0001';
+  end if;
+
+  delete from show_entries where show_id = p_show_id;
+  delete from shows where id = p_show_id;
+end;
+$$ language plpgsql security definer;
+
 -- One row per show with a tracker count, so the /shows list can render
 -- without pulling every participant's entry up front (those load on expand,
 -- same pattern as the movie archive).
@@ -440,7 +468,8 @@ select
   s.number_of_seasons,
   count(se.id) as tracker_count,
   max(se.updated_at) as last_updated_at,
-  s.seasons
+  s.seasons,
+  s.added_by
 from shows s
 left join show_entries se on se.show_id = s.id
-group by s.id, s.title, s.poster_path, s.backdrop_path, s.first_air_year, s.number_of_seasons, s.seasons;
+group by s.id, s.title, s.poster_path, s.backdrop_path, s.first_air_year, s.number_of_seasons, s.seasons, s.added_by;

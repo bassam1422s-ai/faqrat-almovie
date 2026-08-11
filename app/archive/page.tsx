@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Search } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useCurrentParticipant } from "@/hooks/useCurrentParticipant";
 import { MovieCard } from "@/components/MovieCard";
@@ -17,6 +18,7 @@ export default function ArchivePage() {
   );
   const [loading, setLoading] = useState(true);
   const [sortMode, setSortMode] = useState<SortMode>("recent");
+  const [query, setQuery] = useState("");
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -62,13 +64,17 @@ export default function ArchivePage() {
     load();
   }
 
+  const searchedMovies = movies.filter((m) =>
+    m.title.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+
   const canPersonalize = ready && !!participant && myRatedRoundIds !== null;
   const unratedMovies = canPersonalize
-    ? movies.filter((m) => !myRatedRoundIds!.has(m.round_id))
+    ? searchedMovies.filter((m) => !myRatedRoundIds!.has(m.round_id))
     : [];
   const ratedMovies = canPersonalize
-    ? movies.filter((m) => myRatedRoundIds!.has(m.round_id))
-    : movies;
+    ? searchedMovies.filter((m) => myRatedRoundIds!.has(m.round_id))
+    : searchedMovies;
 
   const sorted =
     sortMode === "ranking"
@@ -80,6 +86,18 @@ export default function ArchivePage() {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 pb-16 pt-4">
       <h1 className="animate-blur-fade-up text-2xl font-medium">الأرشيف</h1>
+
+      {!loading && movies.length > 0 && (
+        <div className="liquid-glass flex items-center gap-3 rounded-full px-5 py-3">
+          <Search size={18} className="shrink-0 text-gray-300" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="دوّر باسم فلم..."
+            className="w-full bg-transparent text-white placeholder:text-gray-500 focus:outline-none"
+          />
+        </div>
+      )}
 
       {loading && <p className="text-gray-400">جاري التحميل...</p>}
 
@@ -123,7 +141,10 @@ export default function ArchivePage() {
             </div>
           </div>
 
-          {sorted.length === 0 && (
+          {sorted.length === 0 && query && (
+            <p className="text-gray-400">ما فيه فلم بهذا الاسم</p>
+          )}
+          {sorted.length === 0 && !query && (
             <p className="text-gray-400">ما فيه أفلام بعد — ابدأوا أول فقرة!</p>
           )}
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Pencil, Tv, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Pencil, Tv, Trash2 } from "lucide-react";
 import { tmdbImageUrl } from "@/lib/tmdb";
 import { supabase } from "@/lib/supabaseClient";
 import { RatingInput } from "./RatingInput";
@@ -22,8 +22,10 @@ export function ShowCard({ show, participant, onChanged }: Props) {
   const [episode, setEpisode] = useState(1);
   const [hasRating, setHasRating] = useState(false);
   const [rating, setRating] = useState(7);
+  const [finished, setFinished] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function loadEntries() {
     setLoading(true);
@@ -64,6 +66,7 @@ export function ShowCard({ show, participant, onChanged }: Props) {
     setEpisode(myEntry?.current_episode ?? 1);
     setHasRating(myEntry?.rating != null);
     setRating(myEntry?.rating ?? 7);
+    setFinished(myEntry?.finished ?? false);
     setError(null);
     setEditing(true);
   }
@@ -85,6 +88,7 @@ export function ShowCard({ show, participant, onChanged }: Props) {
       p_rating: hasRating ? rating : null,
       p_current_season: season,
       p_current_episode: episode,
+      p_finished: finished,
     });
     setSaving(false);
     if (error) {
@@ -111,6 +115,27 @@ export function ShowCard({ show, participant, onChanged }: Props) {
     }
     setEditing(false);
     await loadEntries();
+    onChanged();
+  }
+
+  async function handleDeleteShow() {
+    if (!participant) return;
+    if (
+      !window.confirm(
+        `متأكد إنك تبي تحذف "${show.title}" بالكامل؟ بينحذف عند الكل، مو بس عندك.`,
+      )
+    )
+      return;
+    setDeleting(true);
+    const { error } = await supabase.rpc("delete_show", {
+      p_show_id: show.show_id,
+      p_participant_id: participant.id,
+    });
+    setDeleting(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
     onChanged();
   }
 
@@ -157,14 +182,16 @@ export function ShowCard({ show, participant, onChanged }: Props) {
             >
               <span className="text-gray-300">{e.participants.name}</span>
               <span className="text-gray-400">
-                {e.current_season != null && e.current_episode != null
-                  ? (() => {
-                      const total = seasons.find(
-                        (s) => s.season_number === e.current_season,
-                      )?.episode_count;
-                      return `الموسم ${e.current_season} · الحلقة ${e.current_episode}${total ? ` من ${total}` : ""}`;
-                    })()
-                  : "لسا ما بدأ"}
+                {e.finished
+                  ? "خلصه ✅"
+                  : e.current_season != null && e.current_episode != null
+                    ? (() => {
+                        const total = seasons.find(
+                          (s) => s.season_number === e.current_season,
+                        )?.episode_count;
+                        return `الموسم ${e.current_season} · الحلقة ${e.current_episode}${total ? ` من ${total}` : ""}`;
+                      })()
+                    : "لسا ما بدأ"}
               </span>
               <span className="tabular-nums font-medium">
                 {e.rating != null ? Number(e.rating).toFixed(1) : "—"}
@@ -173,47 +200,75 @@ export function ShowCard({ show, participant, onChanged }: Props) {
           ))}
 
           {participant && !loading && !editing && (
-            <button
-              onClick={startEditing}
-              className="mt-2 flex items-center gap-1.5 px-2 py-1.5 text-sm text-gray-300 hover:text-white"
-            >
-              <Pencil size={14} />
-              {myEntry ? "عدّل متابعتي" : "أنا أتابعه بعد"}
-            </button>
+            <div className="mt-2 flex items-center justify-between">
+              <button
+                onClick={startEditing}
+                className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-gray-300 hover:text-white"
+              >
+                <Pencil size={14} />
+                {myEntry ? "عدّل متابعتي" : "أنا أتابعه بعد"}
+              </button>
+              {show.added_by === participant.id && (
+                <button
+                  onClick={handleDeleteShow}
+                  disabled={deleting}
+                  className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
+                >
+                  <Trash2 size={14} />
+                  {deleting ? "جاري الحذف..." : "احذف المسلسل"}
+                </button>
+              )}
+            </div>
           )}
 
           {editing && (
             <div className="mt-2 flex flex-col items-center gap-4 rounded-xl bg-white/5 p-4">
-              <div className="flex items-center gap-3">
-                <label className="flex flex-col items-center gap-1 text-xs text-gray-400">
-                  الموسم
-                  <select
-                    value={season}
-                    onChange={(e) => handleSeasonChange(Number(e.target.value))}
-                    className="liquid-glass w-20 rounded-full px-2 py-1.5 text-center tabular-nums focus:outline-none"
-                  >
-                    {seasonOptions.map((s) => (
-                      <option key={s} value={s} className="bg-black">
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex flex-col items-center gap-1 text-xs text-gray-400">
-                  الحلقة
-                  <select
-                    value={episode}
-                    onChange={(e) => setEpisode(Number(e.target.value))}
-                    className="liquid-glass w-20 rounded-full px-2 py-1.5 text-center tabular-nums focus:outline-none"
-                  >
-                    {episodeOptions.map((e) => (
-                      <option key={e} value={e} className="bg-black">
-                        {e}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+              <button
+                onClick={() => setFinished((v) => !v)}
+                className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm transition-colors ${
+                  finished
+                    ? "bg-white text-black"
+                    : "liquid-glass text-gray-300"
+                }`}
+              >
+                <Check size={14} />
+                خلصت المسلسل
+              </button>
+
+              {!finished && (
+                <div className="flex items-center gap-3">
+                  <label className="flex flex-col items-center gap-1 text-xs text-gray-400">
+                    الموسم
+                    <select
+                      value={season}
+                      onChange={(e) =>
+                        handleSeasonChange(Number(e.target.value))
+                      }
+                      className="liquid-glass w-20 rounded-full px-2 py-1.5 text-center tabular-nums focus:outline-none"
+                    >
+                      {seasonOptions.map((s) => (
+                        <option key={s} value={s} className="bg-black">
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col items-center gap-1 text-xs text-gray-400">
+                    الحلقة
+                    <select
+                      value={episode}
+                      onChange={(e) => setEpisode(Number(e.target.value))}
+                      className="liquid-glass w-20 rounded-full px-2 py-1.5 text-center tabular-nums focus:outline-none"
+                    >
+                      {episodeOptions.map((e) => (
+                        <option key={e} value={e} className="bg-black">
+                          {e}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
 
               {hasRating ? (
                 <RatingInput value={rating} onChange={setRating} />
@@ -253,6 +308,9 @@ export function ShowCard({ show, participant, onChanged }: Props) {
               </div>
               {error && <p className="text-xs text-red-400">{error}</p>}
             </div>
+          )}
+          {error && !editing && (
+            <p className="mt-2 px-2 text-xs text-red-400">{error}</p>
           )}
         </div>
       )}

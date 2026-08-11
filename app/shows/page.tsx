@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useCurrentParticipant } from "@/hooks/useCurrentParticipant";
 import { useParticipants } from "@/hooks/useParticipants";
@@ -24,6 +24,7 @@ export default function ShowsPage() {
   const [filteredShowIds, setFilteredShowIds] = useState<Set<string> | null>(
     null,
   );
+  const [query, setQuery] = useState("");
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -73,6 +74,7 @@ export default function ShowsPage() {
       p_vote_average: show.vote_average,
       p_number_of_seasons: show.number_of_seasons,
       p_seasons: show.seasons,
+      p_added_by: participant.id,
     });
     if (error || !showId) {
       setAdding(false);
@@ -110,9 +112,9 @@ export default function ShowsPage() {
     );
   }
 
-  const visibleShows = filteredShowIds
-    ? shows.filter((s) => filteredShowIds.has(s.show_id))
-    : shows;
+  const visibleShows = shows
+    .filter((s) => !filteredShowIds || filteredShowIds.has(s.show_id))
+    .filter((s) => s.title.toLowerCase().includes(query.trim().toLowerCase()));
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 pb-16 pt-4">
@@ -135,6 +137,18 @@ export default function ShowsPage() {
         <div className="flex flex-col items-center gap-2">
           <ShowSearch onPick={handlePick} disabled={adding} />
           {addError && <p className="text-sm text-red-400">{addError}</p>}
+        </div>
+      )}
+
+      {shows.length > 0 && (
+        <div className="liquid-glass flex items-center gap-3 rounded-full px-5 py-3">
+          <Search size={18} className="shrink-0 text-gray-300" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="دوّر باسم مسلسل..."
+            className="w-full bg-transparent text-white placeholder:text-gray-500 focus:outline-none"
+          />
         </div>
       )}
 
@@ -166,7 +180,10 @@ export default function ShowsPage() {
       {!loading && shows.length === 0 && (
         <p className="text-gray-400">ما فيه مسلسلات بعد — أضف أول وحد!</p>
       )}
-      {!loading && shows.length > 0 && visibleShows.length === 0 && (
+      {!loading && shows.length > 0 && visibleShows.length === 0 && query && (
+        <p className="text-gray-400">ما فيه مسلسل بهذا الاسم</p>
+      )}
+      {!loading && shows.length > 0 && visibleShows.length === 0 && !query && (
         <p className="text-gray-400">
           {participants.find((p) => p.id === filterId)?.name} ما يتابع أي مسلسل بعد
         </p>

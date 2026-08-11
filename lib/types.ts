@@ -104,6 +104,7 @@ export type ShowOverview = {
   seasons: TmdbTvSeason[];
   tracker_count: number;
   last_updated_at: string | null;
+  added_by: string | null;
 };
 
 export type ShowEntry = {
@@ -113,6 +114,7 @@ export type ShowEntry = {
   rating: number | null;
   current_season: number | null;
   current_episode: number | null;
+  finished: boolean;
   updated_at: string;
   participants: Participant;
 };
