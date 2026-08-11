@@ -158,6 +158,15 @@ begin
 end;
 $$ language plpgsql security definer;
 
+-- One-off backfill helper: lets a script correct a movie's title (e.g. to
+-- the English TMDB title) without a full round/rating RPC. Title only —
+-- nothing else about the movie is touched.
+create or replace function update_movie_title(p_movie_id uuid, p_title text) returns void as $$
+begin
+  update movies set title = p_title where id = p_movie_id;
+end;
+$$ language plpgsql security definer;
+
 -- Lets the archive delete a mistakenly-logged movie (e.g. picked the wrong
 -- TMDB result). Only touches revealed rounds so it can't be used to cancel
 -- an in-progress vote.
