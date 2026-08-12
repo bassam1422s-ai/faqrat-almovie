@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Star, Trash2, X } from "lucide-react";
+import { ChevronDown, Search, Star, Trash2, X } from "lucide-react";
 import { tmdbImageUrl } from "@/lib/tmdb";
 import { participantDotColor } from "@/lib/participantColor";
 import type { MovieAverage, Rating } from "@/lib/types";
@@ -95,6 +95,18 @@ export function MovieCard({ movie, rank, onDeleted }: Props) {
             className={`shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
           />
         </button>
+        <a
+          href={`https://www.google.com/search?q=${encodeURIComponent(
+            `${movie.title}${movie.release_year ? ` ${movie.release_year}` : ""} movie`,
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="liquid-glass flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-300 hover:text-white"
+          aria-label="ابحث عن الفلم"
+        >
+          <Search size={15} />
+        </a>
       </div>
 
       {open && (
