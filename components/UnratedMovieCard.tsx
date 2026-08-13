@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Search } from "lucide-react";
 import { tmdbImageUrl } from "@/lib/tmdb";
 import { supabase } from "@/lib/supabaseClient";
 import { RatingInput } from "./RatingInput";
@@ -51,6 +52,17 @@ export function UnratedMovieCard({ movie, participantId, onRated }: Props) {
           <p className="truncate font-medium">{movie.title}</p>
           <p className="text-sm text-gray-400">{movie.release_year ?? ""}</p>
         </div>
+        <a
+          href={`https://www.google.com/search?q=${encodeURIComponent(
+            `${movie.title}${movie.release_year ? ` ${movie.release_year}` : ""} movie`,
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="liquid-glass flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-300 hover:text-white"
+          aria-label="ابحث عن الفلم"
+        >
+          <Search size={15} />
+        </a>
         {!rating && (
           <button
             onClick={() => setRating(true)}
