@@ -482,3 +482,148 @@ select
 from shows s
 left join show_entries se on se.show_id = s.id
 group by s.id, s.title, s.poster_path, s.backdrop_path, s.first_air_year, s.number_of_seasons, s.seasons, s.added_by;
+
+-- ---------------------------------------------------------------------------
+-- Prep lists ("فقرة التجهيز") — a checklist of movies to watch before some
+-- upcoming release (e.g. a stack of MCU movies before a new Avengers film).
+-- A checklist item's "done" state is never stored directly — it's derived
+-- live from whether that movie has a revealed round (movies/rounds), so
+-- rating it anywhere in the app (including outside this checklist) ticks it
+-- off automatically and it can never drift out of sync with the archive.
+-- ---------------------------------------------------------------------------
+
+create table prep_lists (
+  id            uuid primary key default gen_random_uuid(),
+  tmdb_id       integer,
+  title         text not null,
+  poster_path   text,
+  backdrop_path text,
+  release_year  integer,
+  created_by    uuid references participants(id),
+  created_at    timestamptz not null default now()
+);
+
+create table prep_items (
+  id              uuid primary key default gen_random_uuid(),
+  prep_list_id    uuid not null references prep_lists(id),
+  tmdb_id         integer not null,
+  title           text not null,
+  poster_path     text,
+  backdrop_path   text,
+  release_year    integer,
+  overview        text,
+  vote_average    numeric(3,1),
+  runtime_minutes integer,
+  created_at      timestamptz not null default now(),
+  unique (prep_list_id, tmdb_id)
+);
+
+alter table prep_lists enable row level security;
+alter table prep_items enable row level security;
+
+create policy "prep_lists are publicly readable"
+  on prep_lists for select using (true);
+
+create policy "prep_items are publicly readable"
+  on prep_items for select using (true);
+
+create or replace function create_prep_list(
+  p_tmdb_id       integer,
+  p_title         text,
+  p_poster_path   text,
+  p_backdrop_path text,
+  p_release_year  integer,
+  p_created_by    uuid
+) returns uuid as $$
+declare
+  v_id uuid;
+begin
+  insert into prep_lists (tmdb_id, title, poster_path, backdrop_path, release_year, created_by)
+  values (p_tmdb_id, p_title, p_poster_path, p_backdrop_path, p_release_year, p_created_by)
+  returning id into v_id;
+
+  return v_id;
+end;
+$$ language plpgsql security definer;
+
+create or replace function add_prep_item(
+  p_prep_list_id    uuid,
+  p_tmdb_id         integer,
+  p_title           text,
+  p_poster_path     text,
+  p_backdrop_path   text,
+  p_release_year    integer,
+  p_overview        text,
+  p_vote_average    numeric,
+  p_runtime_minutes integer
+) returns uuid as $$
+declare
+  v_id uuid;
+begin
+  insert into prep_items (prep_list_id, tmdb_id, title, poster_path, backdrop_path, release_year, overview, vote_average, runtime_minutes)
+  values (p_prep_list_id, p_tmdb_id, p_title, p_poster_path, p_backdrop_path, p_release_year, p_overview, p_vote_average, p_runtime_minutes)
+  on conflict (prep_list_id, tmdb_id) do update set title = excluded.title
+  returning id into v_id;
+
+  return v_id;
+end;
+$$ language plpgsql security definer;
+
+-- Lets anyone remove a mis-added item from a checklist — same trust level
+-- as delete_round in the archive, no per-item ownership.
+create or replace function delete_prep_item(p_item_id uuid) returns void as $$
+begin
+  delete from prep_items where id = p_item_id;
+end;
+$$ language plpgsql security definer;
+
+-- Only whoever created the checklist can delete the whole thing (same
+-- ownership pattern as delete_show).
+create or replace function delete_prep_list(p_prep_list_id uuid, p_participant_id uuid) returns void as $$
+begin
+  if not exists (
+    select 1 from prep_lists where id = p_prep_list_id and created_by = p_participant_id
+  ) then
+    raise exception 'NOT_OWNER' using errcode = 'P0001';
+  end if;
+
+  delete from prep_items where prep_list_id = p_prep_list_id;
+  delete from prep_lists where id = p_prep_list_id;
+end;
+$$ language plpgsql security definer;
+
+create view prep_list_overview as
+select
+  pl.id as prep_list_id,
+  pl.tmdb_id,
+  pl.title,
+  pl.poster_path,
+  pl.backdrop_path,
+  pl.release_year,
+  pl.created_by,
+  count(pi.id) as item_count,
+  count(r.id) as done_count
+from prep_lists pl
+left join prep_items pi on pi.prep_list_id = pl.id
+left join movies m on m.tmdb_id = pi.tmdb_id
+left join rounds r on r.movie_id = m.id and r.status = 'revealed'
+group by pl.id, pl.tmdb_id, pl.title, pl.poster_path, pl.backdrop_path, pl.release_year, pl.created_by;
+
+create view prep_item_status as
+select
+  pi.id as item_id,
+  pi.prep_list_id,
+  pi.tmdb_id,
+  pi.title,
+  pi.poster_path,
+  pi.backdrop_path,
+  pi.release_year,
+  pi.overview,
+  pi.vote_average,
+  pi.runtime_minutes,
+  pi.created_at,
+  r.id as round_id,
+  (r.id is not null) as done
+from prep_items pi
+left join movies m on m.tmdb_id = pi.tmdb_id
+left join rounds r on r.movie_id = m.id and r.status = 'revealed';

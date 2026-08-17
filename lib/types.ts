@@ -118,3 +118,31 @@ export type ShowEntry = {
   updated_at: string;
   participants: Participant;
 };
+
+export type PrepListOverview = {
+  prep_list_id: string;
+  tmdb_id: number | null;
+  title: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_year: number | null;
+  created_by: string | null;
+  item_count: number;
+  done_count: number;
+};
+
+export type PrepItemStatus = {
+  item_id: string;
+  prep_list_id: string;
+  tmdb_id: number;
+  title: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_year: number | null;
+  overview: string | null;
+  vote_average: number | null;
+  runtime_minutes: number | null;
+  created_at: string;
+  round_id: string | null;
+  done: boolean;
+};

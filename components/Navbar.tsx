@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/rating", label: "فقرة التقييم" },
   { href: "/archive", label: "الأرشيف" },
   { href: "/shows", label: "المسلسلات" },
+  { href: "/prep", label: "فقرة التجهيز" },
   { href: "/stats", label: "الإحصائيات" },
 ];
 

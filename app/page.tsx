@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   BarChart3,
   Clapperboard,
+  ListChecks,
   LibraryBig,
   Tv,
   type LucideIcon,
@@ -51,6 +52,12 @@ const SECTIONS: {
     label: "المسلسلات",
     description: "مسلسلات كل واحد ووين وصل",
     icon: Tv,
+  },
+  {
+    href: "/prep",
+    label: "فقرة التجهيز",
+    description: "جهّزوا نفسكم لفلم قادم",
+    icon: ListChecks,
   },
 ];
 
