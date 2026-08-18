@@ -219,3 +219,31 @@ body {
   animation: checkDraw 0.5s ease-out forwards;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Strike grow — a line draws itself across a title outward from the      */
+/* center, once on mount. Used only in فقرة التجهيز's checklist to mark a */
+/* prep-list movie as watched (tied live to whether it's been rated).     */
+/* ---------------------------------------------------------------------- */
+
+@keyframes strikeGrow {
+  from {
+    transform: translateY(-50%) scaleX(0);
+  }
+  to {
+    transform: translateY(-50%) scaleX(1);
+  }
+}
+
+.strike-grow::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: currentColor;
+  transform-origin: center;
+  animation: strikeGrow 0.45s ease-out forwards;
+  pointer-events: none;
+}
+

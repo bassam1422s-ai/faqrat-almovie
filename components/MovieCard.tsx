@@ -11,28 +11,58 @@ type Props = {
   movie: MovieAverage;
   rank: number;
   onDeleted: (roundId: string) => void;
+  adminParticipantId?: string | null;
 };
 
-export function MovieCard({ movie, rank, onDeleted }: Props) {
+export function MovieCard({
+  movie,
+  rank,
+  onDeleted,
+  adminParticipantId,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [ratings, setRatings] = useState<Rating[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [posterOpen, setPosterOpen] = useState(false);
+  const [deletingRatingId, setDeletingRatingId] = useState<string | null>(
+    null,
+  );
+
+  async function loadRatings() {
+    const { data } = await supabase
+      .from("ratings")
+      .select("*, participants(*)")
+      .eq("round_id", movie.round_id)
+      .order("score", { ascending: false });
+    setRatings((data as unknown as Rating[]) ?? []);
+  }
 
   async function toggle() {
     if (!open && ratings === null) {
       setLoading(true);
-      const { data } = await supabase
-        .from("ratings")
-        .select("*, participants(*)")
-        .eq("round_id", movie.round_id)
-        .order("score", { ascending: false });
-      setRatings((data as unknown as Rating[]) ?? []);
+      await loadRatings();
       setLoading(false);
     }
     setOpen((v) => !v);
+  }
+
+  async function handleAdminDeleteRating(rating: Rating) {
+    if (!adminParticipantId) return;
+    if (
+      !window.confirm(
+        `تحذف تقييم ${rating.participants.name} لهذا الفلم عشان يعيد التقييم؟`,
+      )
+    )
+      return;
+    setDeletingRatingId(rating.id);
+    await supabase.rpc("admin_delete_rating", {
+      p_rating_id: rating.id,
+      p_admin_participant_id: adminParticipantId,
+    });
+    setDeletingRatingId(null);
+    await loadRatings();
   }
 
   async function handleDelete() {
@@ -115,7 +145,7 @@ export function MovieCard({ movie, rank, onDeleted }: Props) {
           {ratings?.map((r) => (
             <div
               key={r.id}
-              className="grid grid-cols-[1fr_auto] items-center gap-3 px-2 py-1.5 text-sm"
+              className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-2 py-1.5 text-sm"
             >
               <span className="flex min-w-0 items-center gap-2 text-gray-300">
                 <span
@@ -126,6 +156,16 @@ export function MovieCard({ movie, rank, onDeleted }: Props) {
               <span className="w-10 shrink-0 text-right tabular-nums font-medium">
                 {Number(r.score).toFixed(1)}
               </span>
+              {adminParticipantId && (
+                <button
+                  onClick={() => handleAdminDeleteRating(r)}
+                  disabled={deletingRatingId !== null}
+                  className="shrink-0 text-gray-500 hover:text-red-400 disabled:opacity-50"
+                  aria-label={`احذف تقييم ${r.participants.name}`}
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
           ))}
 

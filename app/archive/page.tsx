@@ -19,6 +19,7 @@ export default function ArchivePage() {
   const [loading, setLoading] = useState(true);
   const [sortMode, setSortMode] = useState<SortMode>("recent");
   const [query, setQuery] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -54,6 +55,26 @@ export default function ArchivePage() {
       cancelled = true;
     };
   }, [ready, participant]);
+
+  useEffect(() => {
+    if (!participant) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsAdmin(false);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from("participants")
+      .select("is_admin")
+      .eq("id", participant.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setIsAdmin(data?.is_admin ?? false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [participant]);
 
   function handleDeleted(roundId: string) {
     setMovies((prev) => prev.filter((m) => m.round_id !== roundId));
@@ -155,6 +176,7 @@ export default function ArchivePage() {
                 movie={movie}
                 rank={i + 1}
                 onDeleted={handleDeleted}
+                adminParticipantId={isAdmin ? (participant?.id ?? null) : null}
               />
             ))}
           </div>

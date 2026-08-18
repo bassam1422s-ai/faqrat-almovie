@@ -237,10 +237,14 @@ export function PrepDetailClient({ prepListId }: { prepListId: string }) {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p
-                  className={`truncate font-medium ${item.done ? "text-gray-500 line-through" : ""}`}
-                >
-                  {item.title}
+                <p className="font-medium">
+                  <span
+                    className={`relative inline-block max-w-full truncate align-bottom ${
+                      item.done ? "strike-grow text-gray-500" : ""
+                    }`}
+                  >
+                    {item.title}
+                  </span>
                 </p>
                 <p className="text-sm text-gray-400">
                   {item.release_year ?? ""}

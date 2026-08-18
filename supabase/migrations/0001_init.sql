@@ -11,6 +11,11 @@ create table participants (
   id         uuid primary key default gen_random_uuid(),
   name       text not null unique,
   active     boolean not null default true,
+  -- Lets one person correct someone else's already-revealed rating (e.g. a
+  -- fat-finger during the live vote) so it can be resubmitted. Not a real
+  -- auth system — this whole app has none — just a courtesy gate so the
+  -- button only shows up for whoever's meant to use it.
+  is_admin   boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -209,6 +214,31 @@ begin
 
   insert into ratings (round_id, participant_id, score)
   values (p_round_id, p_participant_id, p_score);
+end;
+$$ language plpgsql security definer;
+
+-- Lets an admin clear one specific person's rating so they can resubmit
+-- (e.g. they meant 7 not 9). Only on revealed rounds — same "no peeking at
+-- an in-progress vote" guarantee as submit_late_rating/delete_round, so this
+-- can't be used to erase someone's answer while a round is still open.
+create or replace function admin_delete_rating(
+  p_rating_id           uuid,
+  p_admin_participant_id uuid
+) returns void as $$
+begin
+  if not exists (select 1 from participants where id = p_admin_participant_id and is_admin) then
+    raise exception 'NOT_ADMIN' using errcode = 'P0001';
+  end if;
+
+  if not exists (
+    select 1 from ratings rt
+    join rounds r on r.id = rt.round_id
+    where rt.id = p_rating_id and r.status = 'revealed'
+  ) then
+    raise exception 'ROUND_NOT_REVEALED' using errcode = 'P0001';
+  end if;
+
+  delete from ratings where id = p_rating_id;
 end;
 $$ language plpgsql security definer;
 
