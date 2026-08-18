@@ -11,6 +11,7 @@ import { useParticipants } from "@/hooks/useParticipants";
 import { storeParticipant } from "@/lib/participant";
 import { NamePicker } from "@/components/NamePicker";
 import { MovieSearch } from "@/components/MovieSearch";
+import { syncMovieCast } from "@/lib/syncMovieCast";
 import type {
   PrepItemStatus,
   PrepListOverview,
@@ -109,6 +110,14 @@ export function PrepDetailClient({ prepListId }: { prepListId: string }) {
       );
       return;
     }
+
+    const { data: movieRow } = await supabase
+      .from("movies")
+      .select("id")
+      .eq("tmdb_id", item.tmdb_id)
+      .maybeSingle();
+    if (movieRow) syncMovieCast(item.tmdb_id, movieRow.id);
+
     router.push("/rating");
   }
 

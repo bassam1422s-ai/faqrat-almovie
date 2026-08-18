@@ -1,4 +1,5 @@
 import type {
+  TmdbCastMember,
   TmdbMovieDetails,
   TmdbSearchResult,
   TmdbTvDetails,
@@ -104,6 +105,37 @@ export async function getMovieDetails(
   };
 }
 
+type TmdbApiCastMember = {
+  id: number;
+  name: string;
+  profile_path: string | null;
+  popularity: number;
+  order: number;
+};
+
+// Top-billed cast only (order < 15) — leads and notable supporting roles,
+// excludes background/extra credits. Used to build the "top actors" stat.
+export async function getMovieCredits(
+  tmdbId: number,
+): Promise<TmdbCastMember[]> {
+  const url = new URL(`${TMDB_API_BASE}/movie/${tmdbId}/credits`);
+  url.searchParams.set("language", "en-US");
+
+  const res = await fetch(url, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`TMDB credits failed: ${res.status}`);
+  const data: { cast: TmdbApiCastMember[] } = await res.json();
+
+  return data.cast
+    .filter((c) => c.order < 15)
+    .map((c) => ({
+      tmdb_id: c.id,
+      name: c.name,
+      profile_path: c.profile_path,
+      popularity: c.popularity,
+      order: c.order,
+    }));
+}
+
 type TmdbApiTvItem = {
   id: number;
   name: string;
@@ -153,6 +185,7 @@ export async function getShowDetails(tmdbId: number): Promise<TmdbTvDetails> {
   const item: TmdbApiTvItem & {
     number_of_seasons: number | null;
     seasons: TmdbApiSeason[] | null;
+    episode_run_time: number[] | null;
   } = await res.json();
 
   return {
@@ -172,6 +205,7 @@ export async function getShowDetails(tmdbId: number): Promise<TmdbTvDetails> {
         name: s.name,
         episode_count: s.episode_count,
       })),
+    episode_run_time: item.episode_run_time?.[0] ?? null,
   };
 }
 

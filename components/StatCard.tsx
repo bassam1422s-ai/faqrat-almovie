@@ -1,11 +1,13 @@
 import { GlassCard } from "./GlassCard";
-import type { ParticipantStats } from "@/lib/types";
+import { formatDuration } from "@/lib/duration";
+import type { ParticipantStats, ParticipantWatchStats } from "@/lib/types";
 
 type Props = {
   stats: ParticipantStats;
+  watchStats?: ParticipantWatchStats;
 };
 
-export function StatCard({ stats }: Props) {
+export function StatCard({ stats, watchStats }: Props) {
   return (
     <GlassCard>
       <p className="text-lg font-medium">{stats.name}</p>
@@ -15,9 +17,19 @@ export function StatCard({ stats }: Props) {
         </span>
         <span className="mb-1 text-sm text-gray-400">معدل تقييماته</span>
       </div>
-      <p className="mt-2 text-sm text-gray-400">
-        قيّم {stats.ratings_given} فلم
-      </p>
+      <p className="mt-2 text-sm text-gray-400">قيّم {stats.ratings_given} فلم</p>
+
+      {watchStats && (
+        <div className="mt-3 flex flex-col gap-1 border-t border-white/10 pt-3 text-sm text-gray-400">
+          <p>شاف أفلام: {formatDuration(watchStats.movie_minutes)}</p>
+          <p>
+            يتابع {watchStats.shows_count} مسلسل
+            {watchStats.episodes_count > 0
+              ? ` (${watchStats.episodes_count} حلقة) — ${formatDuration(watchStats.show_minutes)}`
+              : ""}
+          </p>
+        </div>
+      )}
     </GlassCard>
   );
 }

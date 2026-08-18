@@ -75,6 +75,7 @@ export default function ShowsPage() {
       p_number_of_seasons: show.number_of_seasons,
       p_seasons: show.seasons,
       p_added_by: participant.id,
+      p_episode_run_time: show.episode_run_time,
     });
     if (error || !showId) {
       setAdding(false);

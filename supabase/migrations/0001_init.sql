@@ -322,6 +322,69 @@ join rounds r on r.id = rt.round_id and r.status = 'revealed'
 group by p.id, p.name;
 
 -- ---------------------------------------------------------------------------
+-- Movie cast — cached from TMDB (top-billed only, order < 15) whenever a
+-- round starts, so the stats page can show "actors we've seen the most".
+-- Populated client-side right after start_round succeeds (best-effort —
+-- never blocks the rating flow if the TMDB call fails), plus a one-time
+-- backfill script for movies logged before this existed.
+-- ---------------------------------------------------------------------------
+
+create table movie_cast (
+  id            uuid primary key default gen_random_uuid(),
+  movie_id      uuid not null references movies(id),
+  actor_tmdb_id integer not null,
+  actor_name    text not null,
+  profile_path  text,
+  popularity    numeric,
+  cast_order    integer,
+  unique (movie_id, actor_tmdb_id)
+);
+
+alter table movie_cast enable row level security;
+
+create policy "movie_cast are publicly readable"
+  on movie_cast for select using (true);
+
+-- p_cast is a JSON array of {tmdb_id, name, profile_path, popularity, order}.
+create or replace function add_movie_cast(p_movie_id uuid, p_cast jsonb) returns void as $$
+begin
+  insert into movie_cast (movie_id, actor_tmdb_id, actor_name, profile_path, popularity, cast_order)
+  select
+    p_movie_id,
+    (c->>'tmdb_id')::integer,
+    c->>'name',
+    c->>'profile_path',
+    (c->>'popularity')::numeric,
+    (c->>'order')::integer
+  from jsonb_array_elements(p_cast) as c
+  on conflict (movie_id, actor_tmdb_id) do update
+    set actor_name = excluded.actor_name,
+        profile_path = excluded.profile_path,
+        popularity = excluded.popularity,
+        cast_order = excluded.cast_order;
+end;
+$$ language plpgsql security definer;
+
+-- "Very famous" is inherently fuzzy — this uses a modest popularity floor
+-- (TMDB's popularity score is noisy/time-sensitive, so the bar is low on
+-- purpose) combined with movie_cast only ever storing top-billed roles
+-- (order < 15) to begin with, which already excludes background/extra
+-- credits. Adjust the "3" below if the results feel off.
+create view top_actors as
+select
+  mc.actor_tmdb_id,
+  mc.actor_name,
+  max(mc.profile_path) as profile_path,
+  max(mc.popularity) as popularity,
+  count(distinct mc.movie_id) as movie_count
+from movie_cast mc
+join movies m on m.id = mc.movie_id
+join rounds r on r.movie_id = m.id and r.status = 'revealed'
+group by mc.actor_tmdb_id, mc.actor_name
+having max(mc.popularity) >= 3
+order by movie_count desc, popularity desc;
+
+-- ---------------------------------------------------------------------------
 -- Row Level Security
 -- participants / movies / rounds are fully public (nothing sensitive).
 -- ratings are only readable once the parent round is revealed, so no one can
@@ -379,6 +442,10 @@ create table shows (
   -- Whoever added the show is the only one allowed to delete it entirely
   -- (delete_show below) — null for shows added before this column existed.
   added_by          uuid references participants(id),
+  -- TMDB's average episode length in minutes. Used to estimate total time
+  -- watched per person (current_episode * episode_run_time) — an estimate,
+  -- since it's a show-wide average rather than a true per-episode runtime.
+  episode_run_time  integer,
   created_at        timestamptz not null default now()
 );
 
@@ -417,13 +484,14 @@ create or replace function add_show(
   p_vote_average      numeric,
   p_number_of_seasons integer,
   p_seasons           jsonb default '[]'::jsonb,
-  p_added_by          uuid default null
+  p_added_by          uuid default null,
+  p_episode_run_time  integer default null
 ) returns uuid as $$
 declare
   v_show_id uuid;
 begin
-  insert into shows (tmdb_id, title, poster_path, backdrop_path, first_air_year, overview, vote_average, number_of_seasons, seasons, added_by)
-  values (p_tmdb_id, p_title, p_poster_path, p_backdrop_path, p_first_air_year, p_overview, p_vote_average, p_number_of_seasons, p_seasons, p_added_by)
+  insert into shows (tmdb_id, title, poster_path, backdrop_path, first_air_year, overview, vote_average, number_of_seasons, seasons, added_by, episode_run_time)
+  values (p_tmdb_id, p_title, p_poster_path, p_backdrop_path, p_first_air_year, p_overview, p_vote_average, p_number_of_seasons, p_seasons, p_added_by, p_episode_run_time)
   -- added_by is intentionally left out of the update clause below: if the
   -- show already exists, whoever added it first stays the owner.
   on conflict (tmdb_id) do update
@@ -434,7 +502,8 @@ begin
         overview = excluded.overview,
         vote_average = excluded.vote_average,
         number_of_seasons = excluded.number_of_seasons,
-        seasons = excluded.seasons
+        seasons = excluded.seasons,
+        episode_run_time = excluded.episode_run_time
   returning id into v_show_id;
 
   return v_show_id;
@@ -472,6 +541,15 @@ create or replace function delete_show_entry(
 begin
   delete from show_entries
    where show_id = p_show_id and participant_id = p_participant_id;
+end;
+$$ language plpgsql security definer;
+
+-- One-off backfill helper: sets a show's average episode runtime (minutes)
+-- without touching anything else, for shows added before this column
+-- existed.
+create or replace function update_show_episode_run_time(p_show_id uuid, p_episode_run_time integer) returns void as $$
+begin
+  update shows set episode_run_time = p_episode_run_time where id = p_show_id;
 end;
 $$ language plpgsql security definer;
 
@@ -657,3 +735,36 @@ select
 from prep_items pi
 left join movies m on m.tmdb_id = pi.tmdb_id
 left join rounds r on r.movie_id = m.id and r.status = 'revealed';
+
+-- ---------------------------------------------------------------------------
+-- Per-person watch stats for the stats page: total movie/show minutes,
+-- shows tracked, and episodes watched. show_minutes is an estimate
+-- (current_episode * the show's average episode_run_time from TMDB).
+-- ---------------------------------------------------------------------------
+
+create view participant_watch_stats as
+select
+  p.id as participant_id,
+  p.name,
+  coalesce(mv.movie_minutes, 0) as movie_minutes,
+  coalesce(sh.shows_count, 0) as shows_count,
+  coalesce(sh.episodes_count, 0) as episodes_count,
+  coalesce(sh.show_minutes, 0) as show_minutes
+from participants p
+left join (
+  select rt.participant_id, sum(m.runtime_minutes) as movie_minutes
+  from ratings rt
+  join rounds r on r.id = rt.round_id and r.status = 'revealed'
+  join movies m on m.id = r.movie_id
+  group by rt.participant_id
+) mv on mv.participant_id = p.id
+left join (
+  select
+    se.participant_id,
+    count(distinct se.show_id) as shows_count,
+    sum(coalesce(se.current_episode, 0)) as episodes_count,
+    sum(coalesce(se.current_episode, 0) * coalesce(s.episode_run_time, 0)) as show_minutes
+  from show_entries se
+  join shows s on s.id = se.show_id
+  group by se.participant_id
+) sh on sh.participant_id = p.id;

@@ -5,17 +5,37 @@ import { supabase } from "@/lib/supabaseClient";
 import { useMovieAverages } from "@/hooks/useMovieAverages";
 import { StatCard } from "@/components/StatCard";
 import { GlassCard } from "@/components/GlassCard";
-import type { ParticipantStats } from "@/lib/types";
+import { TopActorsList } from "@/components/TopActorsList";
+import type {
+  ParticipantStats,
+  ParticipantWatchStats,
+  TopActor,
+} from "@/lib/types";
 
 export default function StatsPage() {
   const [participantStats, setParticipantStats] = useState<ParticipantStats[]>([]);
+  const [watchStats, setWatchStats] = useState<ParticipantWatchStats[]>([]);
+  const [topActors, setTopActors] = useState<TopActor[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
   const { movies, loading: moviesLoading } = useMovieAverages();
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase.from("participant_stats").select("*").order("name");
-      setParticipantStats((data as ParticipantStats[]) ?? []);
+      const [
+        { data: statsData },
+        { data: watchData },
+        { data: actorsData },
+      ] = await Promise.all([
+        supabase.from("participant_stats").select("*").order("name"),
+        supabase.from("participant_watch_stats").select("*"),
+        supabase
+          .from("top_actors")
+          .select("*")
+          .limit(12),
+      ]);
+      setParticipantStats((statsData as ParticipantStats[]) ?? []);
+      setWatchStats((watchData as ParticipantWatchStats[]) ?? []);
+      setTopActors((actorsData as TopActor[]) ?? []);
       setStatsLoading(false);
     }
     load();
@@ -57,6 +77,8 @@ export default function StatsPage() {
             </div>
           </GlassCard>
 
+          <TopActorsList actors={topActors} />
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {participantStats.map((s, i) => (
               <div
@@ -64,7 +86,12 @@ export default function StatsPage() {
                 className="animate-blur-fade-up"
                 style={{ animationDelay: `${100 + i * 60}ms` }}
               >
-                <StatCard stats={s} />
+                <StatCard
+                  stats={s}
+                  watchStats={watchStats.find(
+                    (w) => w.participant_id === s.participant_id,
+                  )}
+                />
               </div>
             ))}
           </div>

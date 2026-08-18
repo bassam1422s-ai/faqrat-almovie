@@ -93,6 +93,7 @@ export type TmdbTvSeason = {
 export type TmdbTvDetails = TmdbTvSearchResult & {
   number_of_seasons: number | null;
   seasons: TmdbTvSeason[];
+  episode_run_time: number | null;
 };
 
 export type ShowOverview = {
@@ -146,4 +147,29 @@ export type PrepItemStatus = {
   created_at: string;
   round_id: string | null;
   done: boolean;
+};
+
+export type TmdbCastMember = {
+  tmdb_id: number;
+  name: string;
+  profile_path: string | null;
+  popularity: number;
+  order: number;
+};
+
+export type TopActor = {
+  actor_tmdb_id: number;
+  actor_name: string;
+  profile_path: string | null;
+  popularity: number;
+  movie_count: number;
+};
+
+export type ParticipantWatchStats = {
+  participant_id: string;
+  name: string;
+  movie_minutes: number;
+  shows_count: number;
+  episodes_count: number;
+  show_minutes: number;
 };

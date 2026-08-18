@@ -13,6 +13,7 @@ import { RatingInput } from "@/components/RatingInput";
 import { RoundStatusBanner } from "@/components/RoundStatusBanner";
 import { RevealResults } from "@/components/RevealResults";
 import { GlassButton } from "@/components/GlassButton";
+import { syncMovieCast } from "@/lib/syncMovieCast";
 import type { Movie, Participant, Rating, Round, TmdbMovieDetails } from "@/lib/types";
 
 export default function RatingPage() {
@@ -100,6 +101,13 @@ function RoundView({
       return;
     }
     refresh();
+
+    const { data: movieRow } = await supabase
+      .from("movies")
+      .select("id")
+      .eq("tmdb_id", movie.tmdb_id)
+      .maybeSingle();
+    if (movieRow) syncMovieCast(movie.tmdb_id, movieRow.id);
   }
 
   async function submitRating() {
