@@ -186,6 +186,7 @@ export async function getShowDetails(tmdbId: number): Promise<TmdbTvDetails> {
     number_of_seasons: number | null;
     seasons: TmdbApiSeason[] | null;
     episode_run_time: number[] | null;
+    last_episode_to_air: { runtime: number | null } | null;
   } = await res.json();
 
   return {
@@ -205,7 +206,11 @@ export async function getShowDetails(tmdbId: number): Promise<TmdbTvDetails> {
         name: s.name,
         episode_count: s.episode_count,
       })),
-    episode_run_time: item.episode_run_time?.[0] ?? null,
+    // TMDB has deprecated episode_run_time for most shows (returns []) —
+    // fall back to the last aired episode's own runtime, which is still
+    // populated.
+    episode_run_time:
+      item.episode_run_time?.[0] ?? item.last_episode_to_air?.runtime ?? null,
   };
 }
 
